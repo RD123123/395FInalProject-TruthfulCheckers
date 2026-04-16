@@ -1,0 +1,7 @@
+TEAM_ID=
+
+PRODUCT_NAME=FinalProject395TruthfulCheckers
+PRODUCT_BUNDLE_IDENTIFIER=edu.moravian.csci215.finalproject395_truthfulcheckers.FinalProject395TruthfulCheckers$(TEAM_ID)
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0
