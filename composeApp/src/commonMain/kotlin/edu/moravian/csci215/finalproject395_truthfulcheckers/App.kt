@@ -1,48 +1,67 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 
-import finalproject395truthfulcheckers.composeapp.generated.resources.Res
-import finalproject395truthfulcheckers.composeapp.generated.resources.compose_multiplatform
+// ---> THIS IS THE MAGIC LINE that links your new files <---
+import edu.moravian.csci215.finalproject395_truthfulcheckers.screens.*
+
+// 1. Define your routes
+enum class TruthfulCheckersScreen {
+    Home, GameMode, Setup, MainGame, Question, Results
+}
 
 @Composable
-@Preview
 fun App() {
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
+        // 2. Initialize the NavController
+        val navController = rememberNavController()
+
+        // 3. Set up the NavHost
+        NavHost(
+            navController = navController,
+            startDestination = TruthfulCheckersScreen.Home.name,
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
                 .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+
+            composable(route = TruthfulCheckersScreen.Home.name) {
+                HomeScreen(onStartClick = { navController.navigate(TruthfulCheckersScreen.GameMode.name) })
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
+
+            composable(route = TruthfulCheckersScreen.GameMode.name) {
+                GameModeScreen(onModeSelected = { navController.navigate(TruthfulCheckersScreen.Setup.name) })
+            }
+
+            composable(route = TruthfulCheckersScreen.Setup.name) {
+                SetupScreen(onFinishSetup = { navController.navigate(TruthfulCheckersScreen.MainGame.name) })
+            }
+
+            composable(route = TruthfulCheckersScreen.MainGame.name) {
+                MainGameScreen(
+                    onTriggerQuestion = { navController.navigate(TruthfulCheckersScreen.Question.name) },
+                    onGameEnd = { navController.navigate(TruthfulCheckersScreen.Results.name) }
+                )
+            }
+
+            composable(route = TruthfulCheckersScreen.Question.name) {
+                QuestionScreen(onAnswerSubmitted = { navController.popBackStack() })
+            }
+
+            composable(route = TruthfulCheckersScreen.Results.name) {
+                ResultsScreen(onPlayAgain = {
+                    navController.navigate(TruthfulCheckersScreen.Home.name) {
+                        popUpTo(TruthfulCheckersScreen.Home.name) { inclusive = true }
+                    }
+                })
             }
         }
     }
