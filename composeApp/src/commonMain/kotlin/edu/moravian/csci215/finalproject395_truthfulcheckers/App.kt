@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import edu.moravian.csci215.finalproject395_truthfulcheckers.screens.*
+import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.TruthfulCheckersTheme
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,15 +52,7 @@ fun App() {
         it.name == backStackEntry?.destination?.route 
     } ?: TruthfulCheckersScreen.Home
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = Color(0xFFBB86FC),
-            primaryContainer = Color(0xFF3700B3),
-            onPrimaryContainer = Color.White,
-            surface = Color(0xFF121212),
-            background = Color(0xFF121212)
-        )
-    ) {
+    TruthfulCheckersTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
@@ -73,9 +66,9 @@ fun App() {
                             }
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     )
                 }

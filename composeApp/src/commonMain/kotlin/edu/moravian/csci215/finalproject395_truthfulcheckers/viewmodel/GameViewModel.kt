@@ -21,7 +21,9 @@ data class GameUiState(
     val isConfusedState: PlayerColor? = null,
     val isAiThinking: Boolean = false,
     val difficulty: String = "Medium",
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isCoinFlipping: Boolean = false,
+    val firstPlayerMessage: String? = null
 )
 
 class GameViewModel(private val repository: GameRepository) : ViewModel() {
@@ -44,24 +46,39 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun resetGame() {
-        val initialBoard = List(8) { row ->
-            List(8) { col ->
-                when {
-                    (row + col) % 2 != 0 && row < 3 -> Piece(PlayerColor.BLUE)
-                    (row + col) % 2 != 0 && row > 4 -> Piece(PlayerColor.RED)
-                    else -> null
+        viewModelScope.launch {
+            val initialBoard = List(8) { row ->
+                List(8) { col ->
+                    when {
+                        (row + col) % 2 != 0 && row < 3 -> Piece(PlayerColor.BLUE)
+                        (row + col) % 2 != 0 && row > 4 -> Piece(PlayerColor.RED)
+                        else -> null
+                    }
                 }
             }
-        }
-        _uiState.update { 
-            it.copy(
-                board = calculateEmotions(initialBoard, PlayerColor.RED, null), 
-                currentPlayer = PlayerColor.RED, 
-                winner = null, 
-                isConfusedState = null,
-                selectedPosition = null,
-                validMoves = emptyList()
-            ) 
+            
+            // Coin flip logic
+            _uiState.update { it.copy(isCoinFlipping = true, firstPlayerMessage = null, winner = null) }
+            delay(2000) // Flip animation time
+            
+            val goesFirst = if ((0..1).random() == 0) PlayerColor.RED else PlayerColor.BLUE
+            val message = if (goesFirst == PlayerColor.RED) "Red Wins Flip!" else "Blue Wins Flip!"
+            
+            _uiState.update { 
+                it.copy(
+                    board = calculateEmotions(initialBoard, goesFirst, null),
+                    currentPlayer = goesFirst,
+                    firstPlayerMessage = message,
+                    isCoinFlipping = false
+                ) 
+            }
+            
+            delay(1500) // Show message for a moment
+            _uiState.update { it.copy(firstPlayerMessage = null) }
+            
+            if (goesFirst == PlayerColor.BLUE) {
+                runAi()
+            }
         }
     }
 
@@ -114,24 +131,6 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             for (c in 0..7) {
                 val opponent = board[r][c]
                 if (opponent != null && opponent.color != piece.color) {
-                    val directions = getMoveDirections(opponent)
-                    for (dr in directions) {
-                        for (dc in listOf(-1, 1)) {
-                            val jumpR = r + (dr * 2)
-                            val jumpC = c + (dc * 2)
-                            if (jumpR == pos.row + dr && jumpC == pos.col + dc) { // Simplified check
-                                // This is a rough approximation for performance
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // More accurate check: Can any opponent piece jump TO a position that captures this piece?
-        for (r in 0..7) {
-            for (c in 0..7) {
-                val opponent = board[r][c]
-                if (opponent != null && opponent.color != piece.color) {
                     val oppPos = Position(r, c)
                     val oppDirs = getMoveDirections(opponent)
                     for (dr in oppDirs) {
@@ -152,7 +151,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     fun onCellClick(position: Position) {
-        if (_uiState.value.isAiThinking || _uiState.value.winner != null) return
+        if (_uiState.value.isAiThinking || _uiState.value.winner != null || _uiState.value.isCoinFlipping) return
 
         val state = _uiState.value
         val piece = state.board[position.row][position.col]
@@ -179,13 +178,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
         for (dr in directions) {
             for (dc in listOf(-1, 1)) {
-                // Normal move
                 val nextR = pos.row + dr
                 val nextC = pos.col + dc
                 if (nextR in 0..7 && nextC in 0..7 && board[nextR][nextC] == null) {
                     moves.add(Position(nextR, nextC))
                 }
-                // Jump move
                 val jumpR = pos.row + dr * 2
                 val jumpC = pos.col + dc * 2
                 if (jumpR in 0..7 && jumpC in 0..7 && board[jumpR][jumpC] == null) {
@@ -197,10 +194,6 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             }
         }
         return moves
-    }
-
-    private fun isValidMove(from: Position, to: Position): Boolean {
-        return getValidMoves(from, _uiState.value.board).contains(to)
     }
 
     private fun triggerQuestion() {
@@ -281,7 +274,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     private fun checkAiTurn() {
         val state = _uiState.value
-        if (state.winner == null && state.currentPlayer == PlayerColor.BLUE) { // Assuming Blue is always AI for now
+        if (state.winner == null && state.currentPlayer == PlayerColor.BLUE) { 
             runAi()
         }
     }
@@ -289,7 +282,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     private fun runAi() {
         viewModelScope.launch {
             _uiState.update { it.copy(isAiThinking = true) }
-            delay(1500) // Simulate thinking
+            delay(1500)
             
             val state = _uiState.value
             val allMoves = mutableListOf<Pair<Position, Position>>()
@@ -317,18 +310,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     val jumpMoves = allMoves.filter { abs(it.first.row - it.second.row) == 2 }
                     if (jumpMoves.isNotEmpty()) jumpMoves.random() else allMoves.random()
                 }
-                else -> { // Medium
+                else -> {
                     val jumpMoves = allMoves.filter { abs(it.first.row - it.second.row) == 2 }
                     if (jumpMoves.isNotEmpty() && (0..1).random() == 0) jumpMoves.random() else allMoves.random()
                 }
             }
 
             _uiState.update { it.copy(pendingMove = selectedMove, isAiThinking = false) }
-            // AI always "answers" correctly for now to keep it simple, or simulate a failure rate
-            if ((0..10).random() > 1) { // 90% accuracy
+            if ((0..10).random() > 1) { 
                 executeMove()
             } else {
-                onAnswerQuestion(false) // Trigger confusion
+                onAnswerQuestion(false)
             }
         }
     }

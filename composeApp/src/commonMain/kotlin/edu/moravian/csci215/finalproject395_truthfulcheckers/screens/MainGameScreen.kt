@@ -1,6 +1,7 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,11 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import edu.moravian.csci215.finalproject395_truthfulcheckers.models.*
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 import org.jetbrains.compose.resources.imageResource
-import org.jetbrains.compose.resources.painterResource
 import truthfulcheckers.composeapp.generated.resources.Res
 import truthfulcheckers.composeapp.generated.resources.spritesheet
 
@@ -42,57 +41,61 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val isLandscape = maxWidth > maxHeight
         
-        if (isLandscape) {
-            Row(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                PlayerPanel(
-                    name = "Player 2",
-                    color = Color.Blue,
-                    isCurrentTurn = state.currentPlayer == PlayerColor.BLUE,
-                    modifier = Modifier.weight(1f)
-                )
-
-                Box(modifier = Modifier.fillMaxHeight().aspectRatio(1f).padding(8.dp)) {
-                    Board(
-                        board = state.board,
-                        selectedPosition = state.selectedPosition,
-                        validMoves = state.validMoves,
-                        onCellClick = { viewModel.onCellClick(it) }
-                    )
-                }
-
-                PlayerPanel(
-                    name = "Player 1",
-                    color = Color.Red,
-                    isCurrentTurn = state.currentPlayer == PlayerColor.RED,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        if (state.isCoinFlipping || state.firstPlayerMessage != null) {
+            CoinFlipOverlay(state.isCoinFlipping, state.firstPlayerMessage)
         } else {
-            Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                PlayerPanel(
-                    name = "Player 2 (Blue)",
-                    color = Color.Blue,
-                    isCurrentTurn = state.currentPlayer == PlayerColor.BLUE
-                )
-                
-                Spacer(Modifier.weight(1f))
+            if (isLandscape) {
+                Row(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    PlayerPanel(
+                        name = "Player 2",
+                        color = Color.Blue,
+                        isCurrentTurn = state.currentPlayer == PlayerColor.BLUE,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
-                    Board(
-                        board = state.board,
-                        selectedPosition = state.selectedPosition,
-                        validMoves = state.validMoves,
-                        onCellClick = { viewModel.onCellClick(it) }
+                    Box(modifier = Modifier.fillMaxHeight().aspectRatio(1f).padding(8.dp)) {
+                        Board(
+                            board = state.board,
+                            selectedPosition = state.selectedPosition,
+                            validMoves = state.validMoves,
+                            onCellClick = { viewModel.onCellClick(it) }
+                        )
+                    }
+
+                    PlayerPanel(
+                        name = "Player 1",
+                        color = Color.Red,
+                        isCurrentTurn = state.currentPlayer == PlayerColor.RED,
+                        modifier = Modifier.weight(1f)
                     )
                 }
+            } else {
+                Column(modifier = Modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    PlayerPanel(
+                        name = "Player 2 (Blue)",
+                        color = Color.Blue,
+                        isCurrentTurn = state.currentPlayer == PlayerColor.BLUE
+                    )
+                    
+                    Spacer(Modifier.weight(1f))
 
-                Spacer(Modifier.weight(1f))
+                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+                        Board(
+                            board = state.board,
+                            selectedPosition = state.selectedPosition,
+                            validMoves = state.validMoves,
+                            onCellClick = { viewModel.onCellClick(it) }
+                        )
+                    }
 
-                PlayerPanel(
-                    name = "Player 1 (Red)",
-                    color = Color.Red,
-                    isCurrentTurn = state.currentPlayer == PlayerColor.RED
-                )
+                    Spacer(Modifier.weight(1f))
+
+                    PlayerPanel(
+                        name = "Player 1 (Red)",
+                        color = Color.Red,
+                        isCurrentTurn = state.currentPlayer == PlayerColor.RED
+                    )
+                }
             }
         }
 
@@ -106,18 +109,66 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
 }
 
 @Composable
+fun CoinFlipOverlay(isFlipping: Boolean, message: String?) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val spriteBitmap = imageResource(Res.drawable.spritesheet)
+            val infiniteTransition = rememberInfiniteTransition()
+            val rotation by infiniteTransition.animateFloat(
+                initialValue = 0f,
+                targetValue = 360f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(500, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart
+                )
+            )
+
+            if (isFlipping) {
+                Text("Flipping Coin...", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(32.dp))
+                Canvas(modifier = Modifier.size(200.dp).rotate(rotation)) {
+                    val spriteWidth = spriteBitmap.width / 3
+                    val spriteHeight = spriteBitmap.height / 4
+                    drawImage(
+                        image = spriteBitmap,
+                        srcOffset = IntOffset(2 * spriteWidth, 0),
+                        srcSize = IntSize(spriteWidth, spriteHeight),
+                        dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                    )
+                }
+            } else if (message != null) {
+                Text(message, style = MaterialTheme.typography.displayLarge, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
 fun PlayerPanel(name: String, color: Color, isCurrentTurn: Boolean, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.padding(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isCurrentTurn) color.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isCurrentTurn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isCurrentTurn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
         ),
-        border = if (isCurrentTurn) androidx.compose.foundation.BorderStroke(2.dp, color) else null
+        border = if (isCurrentTurn) androidx.compose.foundation.BorderStroke(4.dp, color) else null
     ) {
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(name, style = MaterialTheme.typography.headlineSmall, color = color)
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineMedium,
+                color = if (isCurrentTurn) MaterialTheme.colorScheme.onPrimary else color
+            )
             if (isCurrentTurn) {
-                Text("YOUR TURN", style = MaterialTheme.typography.labelLarge, color = color)
+                Text(
+                    text = "YOUR TURN",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
             }
         }
     }
@@ -175,10 +226,6 @@ fun Board(
 @Composable
 fun CheckerPiece(piece: Piece) {
     val spriteBitmap = imageResource(Res.drawable.spritesheet)
-    
-    // Mapping matches the provided image:
-    // Row 0: Happy, Row 1: Scared, Row 2: Mad, Row 3: Confused
-    // Col 0: Red, Col 1: Blue, Col 2: Mixed (for loading)
     val spriteRow = when (piece.emotion) {
         Emotion.HAPPY -> 0
         Emotion.SCARED -> 1
@@ -188,7 +235,7 @@ fun CheckerPiece(piece: Piece) {
     val spriteCol = if (piece.color == PlayerColor.RED) 0 else 1
 
     Box(
-        modifier = Modifier.fillMaxSize(0.9f),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -210,7 +257,7 @@ fun CheckerPiece(piece: Piece) {
                     .background(Color.Yellow, CircleShape)
                     .padding(2.dp)
             ) {
-                Text("K", color = Color.Black, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text("K", color = Color.Black, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
             }
         }
     }
@@ -221,13 +268,17 @@ fun QuestionOverlay(question: TriviaQuestion?, onAnswer: (Boolean) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.8f))
+            .background(Color.Black.copy(alpha = 0.85f))
             .padding(24.dp)
             .clickable(enabled = false) {},
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            ),
             elevation = CardDefaults.cardElevation(12.dp)
         ) {
             Column(
@@ -237,32 +288,46 @@ fun QuestionOverlay(question: TriviaQuestion?, onAnswer: (Boolean) -> Unit) {
                 Icon(
                     imageVector = Icons.Default.Info,
                     contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Spacer(Modifier.height(16.dp))
-                Text("TRIVIA GATE", style = MaterialTheme.typography.headlineMedium)
-                Divider(modifier = Modifier.padding(vertical = 16.dp))
                 Text(
-                    question?.question ?: "Loading trivia...",
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    style = MaterialTheme.typography.titleLarge
+                    text = "TRIVIA GATE",
+                    style = MaterialTheme.typography.displaySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-                Spacer(Modifier.height(32.dp))
+                Divider(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
+                )
+                Text(
+                    text = question?.question ?: "Loading trivia...",
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(Modifier.height(48.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Button(
                         onClick = { onAnswer(true) },
-                        modifier = Modifier.weight(1f).height(64.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                        modifier = Modifier.weight(1f).height(80.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF4CAF50),
+                            contentColor = Color.White
+                        )
                     ) {
-                        Text("TRUE", style = MaterialTheme.typography.titleMedium)
+                        Text("TRUE", style = MaterialTheme.typography.titleLarge)
                     }
                     Button(
                         onClick = { onAnswer(false) },
-                        modifier = Modifier.weight(1f).height(64.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
+                        modifier = Modifier.weight(1f).height(80.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFF44336),
+                            contentColor = Color.White
+                        )
                     ) {
-                        Text("FALSE", style = MaterialTheme.typography.titleMedium)
+                        Text("FALSE", style = MaterialTheme.typography.titleLarge)
                     }
                 }
             }

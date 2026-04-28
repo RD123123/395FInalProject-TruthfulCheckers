@@ -37,9 +37,13 @@ fun HomeScreen(
         
         Spacer(Modifier.height(16.dp))
         
-        OutlinedButton(
+        Button(
             onClick = onInstructionsClick,
-            modifier = Modifier.fillMaxWidth(0.7f).height(56.dp)
+            modifier = Modifier.fillMaxWidth(0.7f).height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
         ) {
             Text("How to Play")
         }
@@ -47,7 +51,7 @@ fun HomeScreen(
         Spacer(Modifier.height(32.dp))
         
         IconButton(onClick = onSettingsClick) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings")
+            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
