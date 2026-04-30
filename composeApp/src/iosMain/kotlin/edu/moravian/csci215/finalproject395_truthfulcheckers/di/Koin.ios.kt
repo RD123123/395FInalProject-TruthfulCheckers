@@ -1,20 +1,19 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.di
 
-import android.content.Context
 import androidx.room.Room
-import androidx.sqlite.driver.AndroidSQLiteDriver
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.AppDatabase
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.AppDatabaseConstructor
 import org.koin.dsl.module
+import platform.Foundation.NSHomeDirectory
 
 actual fun platformModule() = module {
     single {
-        val dbFile = get<Context>().getDatabasePath("truthful_checkers.db")
+        val dbFile = NSHomeDirectory() + "/truthful_checkers.db"
         Room.databaseBuilder<AppDatabase>(
-            context = get<Context>(),
-            name = dbFile.absolutePath,
+            name = dbFile,
             factory = { AppDatabaseConstructor.initialize() }
-        ).setDriver(AndroidSQLiteDriver())
+        ).setDriver(BundledSQLiteDriver())
             .build()
     }
     single { get<AppDatabase>().triviaDao() }

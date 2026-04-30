@@ -1,62 +1,52 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
-private val lightScheme = lightColorScheme(
+private val warmTanScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
     primaryContainer = primaryContainerLight,
     onPrimaryContainer = onPrimaryContainerLight,
     secondary = secondaryLight,
     onSecondary = onSecondaryLight,
-    secondaryContainer = secondaryContainerLight,
-    onSecondaryContainer = onSecondaryContainerLight,
-    tertiary = tertiaryLight,
-    onTertiary = onTertiaryLight,
-    tertiaryContainer = tertiaryContainerLight,
-    onTertiaryContainer = onTertiaryContainerLight,
     background = backgroundLight,
     onBackground = onBackgroundLight,
     surface = surfaceLight,
     onSurface = onSurfaceLight,
-    surfaceVariant = surfaceVariantLight,
-    onSurfaceVariant = onSurfaceVariantLight,
-    outline = outlineLight,
 )
 
-private val darkScheme = darkColorScheme(
+private val darkEspressoScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
     primaryContainer = primaryContainerDark,
     onPrimaryContainer = onPrimaryContainerDark,
-    secondary = secondaryDark,
-    onSecondary = onSecondaryDark,
-    secondaryContainer = secondaryContainerDark,
-    onSecondaryContainer = onSecondaryContainerDark,
-    tertiary = tertiaryDark,
-    onTertiary = onTertiaryDark,
-    tertiaryContainer = tertiaryContainerDark,
-    onTertiaryContainer = onTertiaryContainerDark,
     background = backgroundDark,
     onBackground = onBackgroundDark,
     surface = surfaceDark,
     onSurface = onSurfaceDark,
-    outline = outlineDark,
+)
+
+private val classicBlueScheme = lightColorScheme(
+    primary = primaryBlue,
+    onPrimary = onPrimaryBlue,
+    background = backgroundBlue,
+    onBackground = onBackgroundBlue,
+    surface = backgroundBlue,
+    onSurface = onBackgroundBlue,
 )
 
 @Composable
 fun TruthfulCheckersTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeName: String = "Warm Tan",
     content: @Composable () -> Unit,
 ) {
-    val colorScheme = when {
-        darkTheme -> darkScheme
-        else -> lightScheme
+    val colorScheme = when (themeName) {
+        "Dark Espresso" -> darkEspressoScheme
+        "Classic Blue" -> classicBlueScheme
+        else -> warmTanScheme
     }
 
     MaterialTheme(

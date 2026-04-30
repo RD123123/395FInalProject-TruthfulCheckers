@@ -27,7 +27,12 @@ interface StatsDao {
 }
 
 @Database(entities = [TriviaQuestion::class, GameStats::class], version = 1)
+@ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun triviaDao(): TriviaDao
     abstract fun statsDao(): StatsDao
 }
+
+// Room 2.7.0-rc02 requires an expect object for the database constructor on multiplatform targets.
+@Suppress("NO_ACTUAL_FOR_EXPECT")
+expect object AppDatabaseConstructor : RoomDatabaseConstructor<AppDatabase>

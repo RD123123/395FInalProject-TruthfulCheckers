@@ -21,8 +21,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.SoundManager
 import edu.moravian.csci215.finalproject395_truthfulcheckers.screens.*
 import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.TruthfulCheckersTheme
+import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -31,12 +33,8 @@ import org.koin.compose.koinInject
 import truthfulcheckers.composeapp.generated.resources.Res
 import truthfulcheckers.composeapp.generated.resources.spritesheet
 
-enum class TruthfulCheckersScreen(val title: String) {
-    Home("Truthful Checkers"),
-    GameMode("Select Mode"),
-    Setup("Game Setup"),
-    MainGame("Battle Board"),
-    Results("Game Over")
+enum class TruthfulCheckersScreen {
+    Home, GameMode, Setup, MainGame, Results, Instructions, Settings
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,20 +46,42 @@ fun App() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scope = rememberCoroutineScope()
     
-    val currentScreen = TruthfulCheckersScreen.entries.find { 
-        it.name == backStackEntry?.destination?.route 
-    } ?: TruthfulCheckersScreen.Home
+    val strings = getStrings(uiState.selectedLanguage)
+    
+    val currentRoute = backStackEntry?.destination?.route ?: TruthfulCheckersScreen.Home.name
+    val currentScreen = try { 
+        TruthfulCheckersScreen.valueOf(currentRoute) 
+    } catch (e: Exception) { 
+        TruthfulCheckersScreen.Home 
+    }
 
-    TruthfulCheckersTheme {
+    val screenTitle = when (currentScreen) {
+        TruthfulCheckersScreen.Home -> strings.appName
+        TruthfulCheckersScreen.GameMode -> strings.selectMode
+        TruthfulCheckersScreen.Setup -> strings.gameSetup
+        TruthfulCheckersScreen.MainGame -> strings.appName
+        TruthfulCheckersScreen.Results -> strings.gameOver
+        TruthfulCheckersScreen.Instructions -> strings.howToPlay
+        TruthfulCheckersScreen.Settings -> strings.settings
+    }
+
+    // Stop music if we navigate away from the game or results screen
+    LaunchedEffect(currentScreen) {
+        if (currentScreen != TruthfulCheckersScreen.MainGame && currentScreen != TruthfulCheckersScreen.Results) {
+            SoundManager.stopBackgroundMusic()
+        }
+    }
+
+    TruthfulCheckersTheme(themeName = uiState.selectedTheme) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
                     CenterAlignedTopAppBar(
-                        title = { Text(currentScreen.title) },
+                        title = { Text(screenTitle) },
                         navigationIcon = {
                             if (navController.previousBackStackEntry != null) {
                                 IconButton(onClick = { navController.popBackStack() }) {
-                                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                                    Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
                                 }
                             }
                         },
@@ -82,16 +102,30 @@ fun App() {
                 ) {
                     composable(route = TruthfulCheckersScreen.Home.name) {
                         HomeScreen(
+                            viewModel = viewModel,
                             onStartClick = { 
                                 scope.launch { navigateWithLoading(navController, TruthfulCheckersScreen.GameMode.name, viewModel) }
                             },
-                            onInstructionsClick = { /* Show instructions */ },
-                            onSettingsClick = { /* Navigate to settings */ }
+                            onInstructionsClick = { 
+                                navController.navigate(TruthfulCheckersScreen.Instructions.name)
+                            },
+                            onSettingsClick = { 
+                                navController.navigate(TruthfulCheckersScreen.Settings.name)
+                            }
                         )
+                    }
+
+                    composable(route = TruthfulCheckersScreen.Instructions.name) {
+                        InstructionsScreen(viewModel = viewModel)
+                    }
+
+                    composable(route = TruthfulCheckersScreen.Settings.name) {
+                        SettingsScreen(viewModel = viewModel)
                     }
 
                     composable(route = TruthfulCheckersScreen.GameMode.name) {
                         GameModeScreen(
+                            viewModel = viewModel,
                             onModeSelected = { _ ->
                                 scope.launch { navigateWithLoading(navController, TruthfulCheckersScreen.Setup.name, viewModel) }
                             },
@@ -101,7 +135,9 @@ fun App() {
 
                     composable(route = TruthfulCheckersScreen.Setup.name) {
                         SetupScreen(
-                            onStartGame = { _, _, _, diff ->
+                            viewModel = viewModel,
+                            onStartGame = { p1, p2, _, diff ->
+                                viewModel.setPlayerNames(p1, p2)
                                 viewModel.setDifficulty(diff)
                                 viewModel.resetGame()
                                 scope.launch { navigateWithLoading(navController, TruthfulCheckersScreen.MainGame.name, viewModel) }
@@ -118,7 +154,9 @@ fun App() {
 
                     composable(route = TruthfulCheckersScreen.Results.name) {
                         ResultsScreen(
-                            winner = uiState.winner,
+                            winnerName = if (uiState.winner == edu.moravian.csci215.finalproject395_truthfulcheckers.models.PlayerColor.RED) uiState.player1Name else uiState.player2Name,
+                            winnerColor = uiState.winner,
+                            selectedLanguage = uiState.selectedLanguage,
                             onPlayAgain = {
                                 viewModel.resetGame()
                                 navController.navigate(TruthfulCheckersScreen.MainGame.name) {
@@ -135,7 +173,6 @@ fun App() {
                 }
             }
 
-            // Global Loading Overlay
             if (uiState.isLoading) {
                 LoadingOverlay()
             }
@@ -145,7 +182,7 @@ fun App() {
 
 suspend fun navigateWithLoading(navController: androidx.navigation.NavController, route: String, viewModel: GameViewModel) {
     viewModel.setLoading(true)
-    delay(800) // Brief delay to show the animation
+    delay(800)
     navController.navigate(route)
     viewModel.setLoading(false)
 }
@@ -173,8 +210,6 @@ fun LoadingOverlay() {
         Canvas(modifier = Modifier.size(120.dp).rotate(rotation)) {
             val spriteWidth = spriteBitmap.width / 3
             val spriteHeight = spriteBitmap.height / 4
-            
-            // Draw Column 2, Row 0 (Mixed/Loading face)
             drawImage(
                 image = spriteBitmap,
                 srcOffset = IntOffset(2 * spriteWidth, 0),

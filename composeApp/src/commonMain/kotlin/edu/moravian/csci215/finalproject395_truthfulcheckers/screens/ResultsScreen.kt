@@ -8,37 +8,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import edu.moravian.csci215.finalproject395_truthfulcheckers.models.PlayerColor
+import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 
 @Composable
-fun ResultsScreen(winner: PlayerColor?, onPlayAgain: () -> Unit, onHomeClick: () -> Unit) {
+fun ResultsScreen(
+    winnerName: String,
+    winnerColor: PlayerColor?,
+    selectedLanguage: String,
+    onPlayAgain: () -> Unit,
+    onHomeClick: () -> Unit
+) {
+    val strings = getStrings(selectedLanguage)
+    
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Game Over!",
-            style = MaterialTheme.typography.displayMedium
+            text = strings.gameOver,
+            style = MaterialTheme.typography.displayMedium,
+            color = MaterialTheme.colorScheme.primary
         )
         
         Spacer(Modifier.height(16.dp))
         
         Text(
-            text = if (winner == PlayerColor.RED) "Red Wins! 🏆" else "Blue Wins! 🏆",
+            text = if (winnerColor != null) "$winnerName ${strings.wins}" else strings.tie,
             style = MaterialTheme.typography.headlineMedium,
-            color = if (winner == PlayerColor.RED) Color.Red else Color.Blue
+            color = when (winnerColor) {
+                PlayerColor.RED -> Color.Red
+                PlayerColor.BLUE -> Color.Blue
+                else -> MaterialTheme.colorScheme.onBackground
+            }
         )
         
         Spacer(Modifier.height(48.dp))
         
-        Button(onClick = onPlayAgain, modifier = Modifier.fillMaxWidth(0.7f)) {
-            Text("Play Again")
+        Button(
+            onClick = onPlayAgain, 
+            modifier = Modifier.fillMaxWidth(0.7f).height(56.dp)
+        ) {
+            Text(strings.playAgain)
         }
         
         Spacer(Modifier.height(16.dp))
         
-        OutlinedButton(onClick = onHomeClick, modifier = Modifier.fillMaxWidth(0.7f)) {
-            Text("Back to Home")
+        Button(
+            onClick = onHomeClick, 
+            modifier = Modifier.fillMaxWidth(0.7f).height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            Text(strings.backHome)
         }
     }
 }

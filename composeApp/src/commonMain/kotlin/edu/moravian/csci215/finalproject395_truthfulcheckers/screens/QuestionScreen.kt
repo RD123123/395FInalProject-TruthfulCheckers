@@ -9,21 +9,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 
 @Composable
 fun QuestionScreen(viewModel: GameViewModel, onAnswerSubmitted: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     val question = state.currentQuestion
+    val strings = getStrings(state.selectedLanguage)
 
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Trivia Challenge!", style = MaterialTheme.typography.displaySmall)
+        Text(strings.triviaGate, style = MaterialTheme.typography.displaySmall)
         Spacer(Modifier.height(8.dp))
-        Text("Answer correctly to make your move", style = MaterialTheme.typography.bodyMedium)
+        Text(strings.triviaDesc, style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         
         Spacer(Modifier.height(48.dp))
         
@@ -48,9 +50,9 @@ fun QuestionScreen(viewModel: GameViewModel, onAnswerSubmitted: () -> Unit) {
                     onAnswerSubmitted()
                 },
                 modifier = Modifier.weight(1f).height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50), contentColor = Color.White)
             ) {
-                Text("True")
+                Text(strings.trueText)
             }
             Spacer(Modifier.width(16.dp))
             Button(
@@ -59,9 +61,9 @@ fun QuestionScreen(viewModel: GameViewModel, onAnswerSubmitted: () -> Unit) {
                     onAnswerSubmitted()
                 },
                 modifier = Modifier.weight(1f).height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336))
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336), contentColor = Color.White)
             ) {
-                Text("False")
+                Text(strings.falseText)
             }
         }
     }
