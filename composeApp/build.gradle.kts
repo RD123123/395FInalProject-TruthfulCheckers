@@ -58,15 +58,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
         }
 
-        val commonMain by getting
-        val iosMain by creating {
-            dependsOn(commonMain)
-        }
-        val iosArm64Main by getting {
-            dependsOn(iosMain)
-        }
-        val iosSimulatorArm64Main by getting {
-            dependsOn(iosMain)
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
         }
 
         commonTest.dependencies {

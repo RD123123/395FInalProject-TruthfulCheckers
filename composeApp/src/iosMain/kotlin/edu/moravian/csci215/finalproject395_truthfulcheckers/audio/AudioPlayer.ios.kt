@@ -1,9 +1,11 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.audio
 
-import platform.AVFoundation.AVAudioPlayer
+// ---> THESE TWO IMPORTS ARE THE ONLY FIX <---
+import platform.AVFAudio.AVAudioPlayer
+import platform.AVFAudio.AVAudioPlayerDelegateProtocol
+
 import platform.Foundation.NSBundle
 import platform.Foundation.NSURL
-import platform.AVFoundation.AVAudioPlayerDelegateProtocol
 import platform.darwin.NSObject
 import kotlinx.cinterop.ExperimentalForeignApi
 
@@ -15,12 +17,12 @@ actual class AudioPlayer {
         stopMusic()
         val resourceName = fileName.substringBeforeLast(".")
         val resourceType = fileName.substringAfterLast(".")
-        
+
         val url = NSBundle.mainBundle.URLForResource(resourceName, resourceType) ?: return
-        
+
         try {
             musicPlayer = AVAudioPlayer(contentsOfURL = url, error = null)
-            musicPlayer?.numberOfLoops = if (loop) -1 else 0
+            musicPlayer?.numberOfLoops = if (loop) -1L else 0L // Keep these as Longs for iOS
             musicPlayer?.prepareToPlay()
             musicPlayer?.play()
         } catch (e: Exception) {
@@ -36,9 +38,9 @@ actual class AudioPlayer {
     actual fun playSound(fileName: String) {
         val resourceName = fileName.substringBeforeLast(".")
         val resourceType = fileName.substringAfterLast(".")
-        
+
         val url = NSBundle.mainBundle.URLForResource(resourceName, resourceType) ?: return
-        
+
         try {
             val soundPlayer = AVAudioPlayer(contentsOfURL = url, error = null)
             soundPlayer.prepareToPlay()
