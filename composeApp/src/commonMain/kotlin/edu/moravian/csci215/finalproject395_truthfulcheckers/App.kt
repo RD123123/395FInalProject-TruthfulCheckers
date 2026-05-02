@@ -42,6 +42,7 @@ enum class TruthfulCheckersScreen {
 fun App() {
     val navController = rememberNavController()
     val viewModel: GameViewModel = koinInject()
+    val soundManager: SoundManager = koinInject()
     val uiState by viewModel.uiState.collectAsState()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val scope = rememberCoroutineScope()
@@ -68,7 +69,7 @@ fun App() {
     // Stop music if we navigate away from the game or results screen
     LaunchedEffect(currentScreen) {
         if (currentScreen != TruthfulCheckersScreen.MainGame && currentScreen != TruthfulCheckersScreen.Results) {
-            SoundManager.stopBackgroundMusic()
+            soundManager.stopBackgroundMusic()
         }
     }
 

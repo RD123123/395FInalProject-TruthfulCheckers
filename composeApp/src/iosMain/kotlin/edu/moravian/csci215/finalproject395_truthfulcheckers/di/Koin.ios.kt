@@ -14,8 +14,10 @@ actual fun platformModule() = module {
             name = dbFile,
             factory = { AppDatabaseConstructor.initialize() }
         ).setDriver(BundledSQLiteDriver())
+            .fallbackToDestructiveMigration(true)
             .build()
     }
     single { get<AppDatabase>().triviaDao() }
     single { get<AppDatabase>().statsDao() }
+    single { get<AppDatabase>().gameSessionDao() }
 }

@@ -9,14 +9,18 @@ import org.koin.dsl.module
 
 actual fun platformModule() = module {
     single {
-        val dbFile = get<Context>().getDatabasePath("truthful_checkers.db")
+        val context: Context = get()
+        val dbFile = context.getDatabasePath("truthful_checkers.db")
         Room.databaseBuilder<AppDatabase>(
-            context = get<Context>(),
+            context = context,
             name = dbFile.absolutePath,
             factory = { AppDatabaseConstructor.initialize() }
         ).setDriver(AndroidSQLiteDriver())
+            .fallbackToDestructiveMigration(true)
             .build()
     }
+    
     single { get<AppDatabase>().triviaDao() }
     single { get<AppDatabase>().statsDao() }
+    single { get<AppDatabase>().gameSessionDao() }
 }

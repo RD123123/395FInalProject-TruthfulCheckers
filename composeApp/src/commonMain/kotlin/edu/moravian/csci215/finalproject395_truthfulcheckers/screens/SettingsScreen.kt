@@ -16,11 +16,13 @@ import androidx.compose.ui.unit.sp
 import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.SoundManager
 import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
+import org.koin.compose.koinInject
 
 @Composable
 fun SettingsScreen(viewModel: GameViewModel) {
     val state by viewModel.uiState.collectAsState()
     val strings = getStrings(state.selectedLanguage)
+    val soundManager: SoundManager = koinInject()
 
     val languages = listOf("English", "Spanish", "French")
     val themes = listOf("Warm Tan", "Dark Espresso", "Classic Blue")
@@ -87,14 +89,14 @@ fun SettingsScreen(viewModel: GameViewModel) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             SettingSwitchCompact(
                                 label = strings.soundEffectsShort,
-                                checked = SoundManager.isSoundEnabled,
-                                onCheckedChange = { SoundManager.isSoundEnabled = it },
+                                checked = soundManager.isSoundEnabled,
+                                onCheckedChange = { soundManager.isSoundEnabled = it },
                                 modifier = Modifier.weight(1f)
                             )
                             SettingSwitchCompact(
                                 label = strings.backgroundMusicShort,
-                                checked = SoundManager.isMusicEnabled,
-                                onCheckedChange = { SoundManager.isMusicEnabled = it },
+                                checked = soundManager.isMusicEnabled,
+                                onCheckedChange = { soundManager.isMusicEnabled = it },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -117,8 +119,8 @@ fun SettingsScreen(viewModel: GameViewModel) {
                 Spacer(Modifier.height(24.dp))
 
                 SectionLabel(strings.audio)
-                SettingSwitch(label = strings.soundEffects, checked = SoundManager.isSoundEnabled, onCheckedChange = { SoundManager.isSoundEnabled = it })
-                SettingSwitch(label = strings.backgroundMusic, checked = SoundManager.isMusicEnabled, onCheckedChange = { SoundManager.isMusicEnabled = it })
+                SettingSwitch(label = strings.soundEffects, checked = soundManager.isSoundEnabled, onCheckedChange = { soundManager.isSoundEnabled = it })
+                SettingSwitch(label = strings.backgroundMusic, checked = soundManager.isMusicEnabled, onCheckedChange = { soundManager.isMusicEnabled = it })
             }
             
             Spacer(Modifier.height(32.dp))

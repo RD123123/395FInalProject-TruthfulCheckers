@@ -10,10 +10,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.math.abs
 
 data class GameUiState(
-    val board: List<List<Piece?>> = emptyList(),
+    val board: List<List<Piece?>> = List(8) { List(8) { null } },
     val currentPlayer: PlayerColor = PlayerColor.RED,
     val selectedPosition: Position? = null,
     val validMoves: List<Position> = emptyList(),
@@ -36,19 +38,37 @@ data class GameUiState(
     val player1Name: String = "Player 1",
     val player2Name: String = "Player 2",
     val drawCounter: Int = 0,
-    val selectedLanguage: String = "English"
+    val selectedLanguage: String = "English",
+    val categories: List<TriviaCategory> = emptyList(),
+    val selectedCategory: TriviaCategory? = null,
+    val errorMessage: String? = null
 )
 
-class GameViewModel(private val repository: GameRepository) : ViewModel() {
+class GameViewModel(
+    private val repository: GameRepository,
+    private val soundManager: SoundManager
+) : ViewModel() {
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
 
     init {
+        loadCategories()
+    }
+
+    private fun loadCategories() {
         viewModelScope.launch {
-            repository.fetchQuestionsFromServer()
+            val cats = repository.getCategories()
+            _uiState.update { it.copy(categories = cats) }
+            if (cats.isNotEmpty() && _uiState.value.selectedCategory == null) {
+                _uiState.update { it.copy(selectedCategory = cats.first()) }
+            }
         }
+    }
+
+    fun setCategory(category: TriviaCategory) {
+        _uiState.update { it.copy(selectedCategory = category) }
     }
 
     fun setLanguage(lang: String) {
@@ -96,7 +116,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 }
             }
             
-            SoundManager.startBackgroundMusic()
+            soundManager.startBackgroundMusic()
             
             _uiState.update { 
                 it.copy(
@@ -107,7 +127,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     remainingTime = null,
                     isMultiJumpActive = false,
                     currentQuestion = null,
-                    drawCounter = 0
+                    drawCounter = 0,
+                    errorMessage = null
                 ) 
             }
             delay(2000) 
@@ -116,14 +137,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             val winnerName = if (goesFirst == PlayerColor.RED) _uiState.value.player1Name else _uiState.value.player2Name
             val message = "$winnerName ${strings.winsFlip}"
             
+            val finalBoard = calculateEmotions(initialBoard, goesFirst, null)
             _uiState.update { 
                 it.copy(
-                    board = calculateEmotions(initialBoard, goesFirst, null),
+                    board = finalBoard,
                     currentPlayer = goesFirst,
                     firstPlayerMessage = message,
                     isCoinFlipping = false
                 ) 
             }
+            
+            saveSession()
             
             delay(1500)
             _uiState.update { it.copy(firstPlayerMessage = null) }
@@ -132,6 +156,25 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             
             if (goesFirst == PlayerColor.BLUE) {
                 runAi()
+            }
+        }
+    }
+
+    private fun saveSession() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            try {
+                val session = GameSession(
+                    player1Name = state.player1Name,
+                    player2Name = state.player2Name,
+                    currentPlayer = state.currentPlayer,
+                    selectedCategoryName = state.selectedCategory?.name ?: "General",
+                    selectedCategoryId = state.selectedCategory?.id ?: 9,
+                    boardData = Json.encodeToString(state.board)
+                )
+                repository.saveSession(session)
+            } catch (e: Exception) {
+                // Ignore session save errors to prevent crashes
             }
         }
     }
@@ -166,6 +209,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     private fun calculateEmotions(board: List<List<Piece?>>, currentPlayer: PlayerColor, confusedPlayer: PlayerColor?): List<List<Piece?>> {
+        if (board.isEmpty()) return board
         return board.mapIndexed { r, row ->
             row.mapIndexed { c, piece ->
                 piece?.let { p ->
@@ -183,10 +227,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     private fun canPieceJump(pos: Position, board: List<List<Piece?>>): Boolean {
+        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return false
         return getJumpMovesOnly(pos, board).isNotEmpty()
     }
 
     private fun getJumpMovesOnly(pos: Position, board: List<List<Piece?>>): List<Position> {
+        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return emptyList()
         val piece = board[pos.row][pos.col] ?: return emptyList()
         val moves = mutableListOf<Position>()
         val directions = if (piece.isKing) listOf(-1, 1) else if (piece.color == PlayerColor.RED) listOf(-1) else listOf(1)
@@ -214,6 +260,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     private fun isPieceThreatened(pos: Position, board: List<List<Piece?>>): Boolean {
+        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return false
         val piece = board[pos.row][pos.col] ?: return false
         for (r in 0..7) {
             for (c in 0..7) {
@@ -235,6 +282,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         if (_uiState.value.isAiThinking || _uiState.value.winner != null || _uiState.value.isCoinFlipping) return
 
         val state = _uiState.value
+        if (state.board.isEmpty()) return
+        
         val piece = state.board[position.row][position.col]
 
         if (state.selectedPosition == null) {
@@ -255,6 +304,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
     }
 
     private fun getValidMoves(pos: Position, board: List<List<Piece?>>): List<Position> {
+        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return emptyList()
         val piece = board[pos.row][pos.col] ?: return emptyList()
         val jumps = getJumpMovesOnly(pos, board)
         if (jumps.isNotEmpty()) return jumps
@@ -275,15 +325,17 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     private fun triggerQuestion() {
         viewModelScope.launch {
-            if (_uiState.value.currentQuestion != null) {
-                _uiState.update { it.copy(showQuestion = true) }
-                return@launch
-            }
-
-            val questions = repository.cachedQuestions.first()
-            if (questions.isNotEmpty()) {
-                _uiState.update { it.copy(currentQuestion = questions.random(), showQuestion = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val catId = _uiState.value.selectedCategory?.id ?: 9
+            val question = repository.getQuestion(catId)
+            
+            if (question != null) {
+                _uiState.update { it.copy(currentQuestion = question, showQuestion = true, isLoading = false) }
             } else {
+                _uiState.update { it.copy(
+                    isLoading = false,
+                    errorMessage = "Could not fetch trivia questions. Check your connection."
+                ) }
                 _uiState.update { it.copy(
                     currentQuestion = TriviaQuestion(question = "Is the sky blue?", correctAnswer = true), 
                     showQuestion = true
@@ -294,7 +346,15 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
     fun onAnswerQuestion(answer: Boolean) {
         val state = _uiState.value
-        val isCorrect = answer == state.currentQuestion?.correctAnswer
+        val question = state.currentQuestion
+        val isCorrect = answer == question?.correctAnswer
+        
+        if (question != null) {
+            viewModelScope.launch {
+                repository.markQuestionAsUsed(question.id)
+            }
+        }
+
         _uiState.update { it.copy(showQuestion = false) }
 
         if (isCorrect) {
@@ -314,6 +374,8 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 pendingMove = null,
                 isMultiJumpActive = false
             ) }
+            
+            saveSession()
             
             viewModelScope.launch {
                 delay(3000)
@@ -335,6 +397,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val loser = _uiState.value.currentPlayer
         val winner = if (loser == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
         _uiState.update { it.copy(winner = winner) }
+        viewModelScope.launch { repository.clearSession() }
     }
 
     private fun executeMove() {
@@ -353,11 +416,11 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             val midR = (from.row + to.row) / 2
             val midC = (from.col + to.col) / 2
             newBoard[midR][midC] = null
-            SoundManager.playCaptureSound()
+            soundManager.playCaptureSound()
             captured = true
             _uiState.update { it.copy(drawCounter = 0) } 
         } else {
-            SoundManager.playMoveSound()
+            soundManager.playMoveSound()
             _uiState.update { it.copy(drawCounter = it.drawCounter + 1) }
         }
         
@@ -377,6 +440,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                     pendingMove = null,
                     isMultiJumpActive = true
                 ) }
+                saveSession()
                 startTurnTimer()
                 return 
             }
@@ -384,6 +448,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
 
         if (_uiState.value.drawCounter >= 40) {
             _uiState.update { it.copy(isTie = true, winner = null) }
+            viewModelScope.launch { repository.clearSession() }
             return
         }
 
@@ -398,6 +463,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
             isMultiJumpActive = false
         ) }
         
+        saveSession()
         checkWinCondition(newBoard)
         startTurnTimer()
         checkAiTurn()
@@ -439,6 +505,7 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
                 if (allMoves.isEmpty()) {
                     if (!state.isMultiJumpActive) {
                         _uiState.update { it.copy(winner = PlayerColor.RED, isAiThinking = false) }
+                        viewModelScope.launch { repository.clearSession() }
                     }
                     break
                 }
@@ -466,7 +533,12 @@ class GameViewModel(private val repository: GameRepository) : ViewModel() {
         val redCount = pieces.count { it.color == PlayerColor.RED }
         val blueCount = pieces.count { it.color == PlayerColor.BLUE }
 
-        if (redCount == 0) _uiState.update { it.copy(winner = PlayerColor.BLUE) }
-        else if (blueCount == 0) _uiState.update { it.copy(winner = PlayerColor.RED) }
+        if (redCount == 0) {
+            _uiState.update { it.copy(winner = PlayerColor.BLUE) }
+            viewModelScope.launch { repository.clearSession() }
+        } else if (blueCount == 0) {
+            _uiState.update { it.copy(winner = PlayerColor.RED) }
+            viewModelScope.launch { repository.clearSession() }
+        }
     }
 }

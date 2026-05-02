@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,7 +45,6 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
             CoinFlipOverlay(state.isCoinFlipping, state.firstPlayerMessage, strings)
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Top Info Bar (Timer + Forfeit)
                 TurnInfoBar(
                     currentPlayer = state.currentPlayer,
                     player1Name = state.player1Name,
@@ -60,7 +60,6 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        // Player 2 Panel (Left)
                         PlayerInfoVertical(
                             name = state.player2Name,
                             color = Color.Blue,
@@ -69,7 +68,6 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
                             modifier = Modifier.width(120.dp)
                         )
 
-                        // Shrunk Board (Middle)
                         Box(
                             modifier = Modifier
                                 .fillMaxHeight()
@@ -86,7 +84,6 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
                             )
                         }
 
-                        // Player 1 Panel (Right)
                         PlayerInfoVertical(
                             name = state.player1Name,
                             color = Color.Red,
@@ -96,7 +93,6 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
                         )
                     }
                 } else {
-                    // Portrait Layout
                     Column(
                         modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -136,6 +132,7 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
         if (state.showQuestion) {
             QuestionOverlay(
                 question = state.currentQuestion,
+                errorMessage = state.errorMessage,
                 onAnswer = { viewModel.onAnswerQuestion(it) },
                 onCancel = { viewModel.cancelMove() },
                 isLandscape = isLandscape,
@@ -339,7 +336,14 @@ fun CoinFlipOverlay(isFlipping: Boolean, message: String?, strings: AppStrings) 
 }
 
 @Composable
-fun QuestionOverlay(question: TriviaQuestion?, onAnswer: (Boolean) -> Unit, onCancel: () -> Unit, isLandscape: Boolean, strings: AppStrings) {
+fun QuestionOverlay(
+    question: TriviaQuestion?, 
+    errorMessage: String?,
+    onAnswer: (Boolean) -> Unit, 
+    onCancel: () -> Unit, 
+    isLandscape: Boolean, 
+    strings: AppStrings
+) {
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.85f)).clickable(enabled = false) {},
         contentAlignment = Alignment.Center
@@ -361,9 +365,22 @@ fun QuestionOverlay(question: TriviaQuestion?, onAnswer: (Boolean) -> Unit, onCa
                         Icon(Icons.Default.Close, contentDescription = "Cancel Move", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
+                
+                if (errorMessage != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().background(Color.Red.copy(alpha = 0.1f)).padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
+                        Spacer(Modifier.width(8.dp))
+                        Text(errorMessage, style = MaterialTheme.typography.bodySmall, color = Color.Red)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = question?.question ?: "", 
+                    text = question?.question ?: "Loading...", 
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center, 
                     style = MaterialTheme.typography.titleMedium
                 )

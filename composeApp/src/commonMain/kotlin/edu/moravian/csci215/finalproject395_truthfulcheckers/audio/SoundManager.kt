@@ -6,9 +6,7 @@ expect class AudioPlayer() {
     fun playSound(fileName: String)
 }
 
-object SoundManager {
-    private val player = AudioPlayer()
-    
+class SoundManager(private val player: AudioPlayer) {
     var isMusicEnabled: Boolean = true
         set(value) {
             field = value

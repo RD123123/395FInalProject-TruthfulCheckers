@@ -1,6 +1,11 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.di
 
+import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.AudioPlayer
+import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.SoundManager
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.GameRepository
+import edu.moravian.csci215.finalproject395_truthfulcheckers.data.TriviaDao
+import edu.moravian.csci215.finalproject395_truthfulcheckers.data.StatsDao
+import edu.moravian.csci215.finalproject395_truthfulcheckers.data.GameSessionDao
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -11,21 +16,41 @@ import org.koin.dsl.module
 
 fun commonModule() = module {
     single {
+        Json {
+            ignoreUnknownKeys = true
+            coerceInputValues = true
+        }
+    }
+    
+    single {
+        val json: Json = get()
         HttpClient {
             install(ContentNegotiation) {
-                json(Json {
-                    ignoreUnknownKeys = true
-                    coerceInputValues = true
-                })
+                json(json)
             }
         }
     }
     
-    // Note: Database and DAOs should be provided per-platform or via a factory
-    // For this skeleton, we'll assume they are provided in the platform-specific modules
+    single { AudioPlayer() }
     
-    single { GameRepository(get(), get(), get()) }
-    factory { GameViewModel(get()) }
+    single { 
+        val player: AudioPlayer = get()
+        SoundManager(player) 
+    }
+    
+    single { 
+        val tDao: TriviaDao = get()
+        val sDao: StatsDao = get()
+        val gDao: GameSessionDao = get()
+        val client: HttpClient = get()
+        GameRepository(tDao, sDao, gDao, client) 
+    }
+    
+    factory { 
+        val repo: GameRepository = get()
+        val sound: SoundManager = get()
+        GameViewModel(repo, sound) 
+    }
 }
 
 expect fun platformModule(): Module

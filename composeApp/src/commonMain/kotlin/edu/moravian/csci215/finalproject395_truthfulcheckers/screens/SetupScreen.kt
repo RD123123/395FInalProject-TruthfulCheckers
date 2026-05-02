@@ -23,6 +23,7 @@ fun SetupScreen(viewModel: GameViewModel, onStartGame: (String, String, String, 
     var p1Name by remember { mutableStateOf("") }
     var p2Name by remember { mutableStateOf("") }
     var difficulty by remember { mutableStateOf("Medium") }
+    var expanded by remember { mutableStateOf(false) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val isLandscape = maxWidth > maxHeight
@@ -41,82 +42,72 @@ fun SetupScreen(viewModel: GameViewModel, onStartGame: (String, String, String, 
                 color = MaterialTheme.colorScheme.primary
             )
             
-            Spacer(Modifier.height(if (isLandscape) 16.dp else 32.dp))
+            Spacer(Modifier.height(if (isLandscape) 16.dp else 24.dp))
 
-            if (isLandscape) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(), 
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            // Player Names
+            OutlinedTextField(
+                value = p1Name,
+                onValueChange = { if (!it.contains("\n")) p1Name = it },
+                label = { Text(strings.p1Name) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(if (isLandscape) 0.6f else 0.9f),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = p2Name,
+                onValueChange = { if (!it.contains("\n")) p2Name = it },
+                label = { Text(strings.p2Name) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(if (isLandscape) 0.6f else 0.9f),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // Category Selection
+            Text(text = "Trivia Category", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth(if (isLandscape) 0.6f else 0.9f).padding(top = 8.dp)
+            ) {
+                OutlinedTextField(
+                    value = state.selectedCategory?.name ?: "Loading...",
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
                 ) {
-                    // Column 1: Names
-                    Column(modifier = Modifier.weight(1.2f)) {
-                        OutlinedTextField(
-                            value = p1Name,
-                            onValueChange = { if (!it.contains("\n")) p1Name = it },
-                            label = { Text(strings.p1Name) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = p2Name,
-                            onValueChange = { if (!it.contains("\n")) p2Name = it },
-                            label = { Text(strings.p2Name) },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    state.categories.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.name) },
+                            onClick = {
+                                viewModel.setCategory(category)
+                                expanded = false
+                            }
                         )
                     }
-                    
-                    // Column 2: Difficulty & Button
-                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = strings.aiDifficulty, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        DifficultySelector(difficulty, { difficulty = it })
-                        
-                        Spacer(Modifier.height(24.dp))
-                        
-                        Button(
-                            onClick = { onStartGame(p1Name, p2Name, "General", difficulty) },
-                            modifier = Modifier.fillMaxWidth().height(56.dp)
-                        ) {
-                            Text(strings.startBattle)
-                        }
-                    }
                 }
-            } else {
-                // Portrait Layout
-                OutlinedTextField(
-                    value = p1Name,
-                    onValueChange = { if (!it.contains("\n")) p1Name = it },
-                    label = { Text(strings.p1Name) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-                Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = p2Name,
-                    onValueChange = { if (!it.contains("\n")) p2Name = it },
-                    label = { Text(strings.p2Name) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(0.9f),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
-                )
-                
-                Spacer(Modifier.height(32.dp))
-                Text(text = strings.aiDifficulty, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                DifficultySelector(difficulty, { difficulty = it })
-                
-                Spacer(Modifier.height(48.dp))
-                
-                Button(
-                    onClick = { onStartGame(p1Name, p2Name, "General", difficulty) },
-                    modifier = Modifier.fillMaxWidth(0.8f).height(56.dp)
-                ) {
-                    Text(strings.startBattle)
-                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            // Difficulty
+            Text(text = strings.aiDifficulty, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            DifficultySelector(difficulty, { difficulty = it })
+            
+            Spacer(Modifier.height(32.dp))
+            
+            Button(
+                onClick = { onStartGame(p1Name, p2Name, state.selectedCategory?.name ?: "General", difficulty) },
+                modifier = Modifier.fillMaxWidth(if (isLandscape) 0.4f else 0.8f).height(56.dp)
+            ) {
+                Text(strings.startBattle)
             }
         }
     }
