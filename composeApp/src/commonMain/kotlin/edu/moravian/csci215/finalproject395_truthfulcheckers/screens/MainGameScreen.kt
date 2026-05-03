@@ -5,6 +5,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
@@ -15,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -156,10 +159,10 @@ fun PlayerInfoVertical(name: String, color: Color, isCurrentTurn: Boolean, strin
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(text = name, style = MaterialTheme.typography.titleMedium, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text(text = name, style = MaterialTheme.typography.titleMedium, maxLines = 2, textAlign = TextAlign.Center)
             if (isCurrentTurn) {
                 Spacer(Modifier.height(8.dp))
-                Text(text = strings.yourTurn, style = MaterialTheme.typography.labelSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(text = strings.yourTurn, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -181,7 +184,7 @@ fun PlayerInfoHorizontal(name: String, color: Color, isCurrentTurn: Boolean, str
         ) {
             Text(text = name, style = MaterialTheme.typography.titleLarge)
             if (isCurrentTurn) {
-                Text(text = strings.yourTurn, style = MaterialTheme.typography.labelMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(text = strings.yourTurn, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -190,36 +193,52 @@ fun PlayerInfoHorizontal(name: String, color: Color, isCurrentTurn: Boolean, str
 @Composable
 fun TurnInfoBar(currentPlayer: PlayerColor, player1Name: String, player2Name: String, remainingTime: Int?, onForfeit: () -> Unit, strings: AppStrings) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().height(60.dp),
         color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shadowElevation = 4.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.padding(horizontal = 16.dp).fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (currentPlayer == PlayerColor.RED) "$player1Name" else "$player2Name",
-                    style = MaterialTheme.typography.titleMedium
+                    text = if (currentPlayer == PlayerColor.RED) player1Name else player2Name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
-                Spacer(Modifier.width(12.dp))
-                TextButton(
-                    onClick = onForfeit,
-                    colors = ButtonDefaults.textButtonColors(contentColor = Color.Red),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Text(strings.forfeit, style = MaterialTheme.typography.labelSmall)
+                if (remainingTime != null) {
+                    Text(
+                        text = "${remainingTime}s",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (remainingTime <= 5) Color.Yellow else MaterialTheme.colorScheme.onPrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
             
-            if (remainingTime != null) {
+            Button(
+                onClick = onForfeit,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFC62828),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(4.dp),
+                modifier = Modifier
+                    .height(44.dp)
+                    .widthIn(min = 120.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f))
+            ) {
                 Text(
-                    text = "${remainingTime}s",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = if (remainingTime <= 5) Color.Yellow else MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    text = strings.forfeit.uppercase(),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp
+                    ),
+                    textAlign = TextAlign.Center
                 )
             }
         }
@@ -381,7 +400,7 @@ fun QuestionOverlay(
                 Spacer(Modifier.height(16.dp))
                 Text(
                     text = question?.question ?: "Loading...", 
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center, 
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Spacer(Modifier.height(24.dp))

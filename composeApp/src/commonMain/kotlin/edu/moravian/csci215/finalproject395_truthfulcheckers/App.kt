@@ -67,9 +67,14 @@ fun App() {
         TruthfulCheckersScreen.OnlineBeta -> "Online Beta"
     }
 
-    // Stop music if we navigate away from the game or results screen
+    // Fixed music logic: Only start/stop when transitioning between game-related and menu-related screens
     LaunchedEffect(currentScreen) {
-        if (currentScreen != TruthfulCheckersScreen.MainGame && currentScreen != TruthfulCheckersScreen.Results) {
+        val isGameRelated = currentScreen == TruthfulCheckersScreen.MainGame || currentScreen == TruthfulCheckersScreen.Results
+        if (isGameRelated) {
+            // Only start if not already managed (the SoundManager handles duplicate play requests differently depending on implementation)
+            soundManager.startBackgroundMusic()
+        } else if (currentScreen != TruthfulCheckersScreen.Setup) {
+            // We keep it playing during Setup if it was already started, but stop for others
             soundManager.stopBackgroundMusic()
         }
     }
@@ -78,25 +83,25 @@ fun App() {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 topBar = {
-                    CenterAlignedTopAppBar(
-                        title = { Text(screenTitle) },
-                        navigationIcon = {
-                            val canPop = navController.previousBackStackEntry != null
-                            // Hide back arrow ONLY on MainGame screen as per user request
-                            val isMainGame = currentScreen == TruthfulCheckersScreen.MainGame
-                            
-                            if (canPop && !isMainGame) {
-                                IconButton(onClick = { navController.popBackStack() }) {
-                                    Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+                    // Hide the standard TopAppBar on the MainGame screen to save vertical space
+                    if (currentScreen != TruthfulCheckersScreen.MainGame) {
+                        CenterAlignedTopAppBar(
+                            title = { Text(screenTitle) },
+                            navigationIcon = {
+                                val canPop = navController.previousBackStackEntry != null
+                                if (canPop) {
+                                    IconButton(onClick = { navController.popBackStack() }) {
+                                        Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
+                                    }
                                 }
-                            }
-                        },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                            },
+                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                            )
                         )
-                    )
+                    }
                 }
             ) { innerPadding ->
                 NavHost(

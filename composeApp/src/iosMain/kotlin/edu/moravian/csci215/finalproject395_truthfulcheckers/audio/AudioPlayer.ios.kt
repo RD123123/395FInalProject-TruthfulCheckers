@@ -30,8 +30,7 @@ actual class AudioPlayer {
     private fun configureAudioSession() {
         try {
             val session = AVAudioSession.sharedInstance()
-            // Playback category allows audio even if the physical mute switch is ON.
-            // Explicitly using positional arguments to avoid parameter name mismatch in different Kotlin versions.
+            // Ensure audio plays even if the mute switch is on
             val options = AVAudioSessionCategoryOptionMixWithOthers or AVAudioSessionCategoryOptionDefaultToSpeaker
             session.setCategory(AVAudioSessionCategoryPlayback, options, null)
             session.setActive(true, null)
@@ -44,10 +43,12 @@ actual class AudioPlayer {
         val name = fileName.substringBeforeLast(".")
         val type = fileName.substringAfterLast(".")
         
-        // Search in standard bundle paths for Compose Multiplatform
+        // Search in various locations where Compose Multiplatform bundles assets
         return NSBundle.mainBundle.URLForResource(name, type)
-            ?: NSBundle.mainBundle.URLForResource("compose-resources/files/$name", type)
-            ?: NSBundle.mainBundle.URLForResource("files/$name", type)
+            ?: NSBundle.mainBundle.URLForResource(name, type, "compose-resources/files")
+            ?: NSBundle.mainBundle.URLForResource(name, type, "files")
+            // Try absolute path check
+            ?: NSBundle.mainBundle.pathForResource("compose-resources/files/$name", type)?.let { NSURL.fileURLWithPath(it) }
     }
 
     actual fun playMusic(fileName: String, loop: Boolean) {

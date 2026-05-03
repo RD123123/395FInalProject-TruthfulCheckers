@@ -36,6 +36,13 @@ class SoundManager(private val player: AudioPlayer) {
         }
     }
 
+    fun playWrongAnswerSound() {
+        if (isSoundEnabled) {
+            // Using clack as a fallback if a specific 'wrong' sound isn't provided
+            player.playSound("clack.mp3")
+        }
+    }
+
     fun toggleMusic(enabled: Boolean) {
         isMusicEnabled = enabled
         if (!enabled) stopBackgroundMusic()
