@@ -1,5 +1,9 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.audio
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
 expect class AudioPlayer() {
     fun playMusic(fileName: String, loop: Boolean = true)
     fun stopMusic()
@@ -7,13 +11,8 @@ expect class AudioPlayer() {
 }
 
 class SoundManager(private val player: AudioPlayer) {
-    var isMusicEnabled: Boolean = true
-        set(value) {
-            field = value
-            if (!value) stopBackgroundMusic()
-        }
-    
-    var isSoundEnabled: Boolean = true
+    var isMusicEnabled by mutableStateOf(true)
+    var isSoundEnabled by mutableStateOf(true)
 
     fun startBackgroundMusic() {
         if (isMusicEnabled) {
@@ -35,5 +34,15 @@ class SoundManager(private val player: AudioPlayer) {
         if (isSoundEnabled) {
             player.playSound("clack.mp3")
         }
+    }
+
+    fun toggleMusic(enabled: Boolean) {
+        isMusicEnabled = enabled
+        if (!enabled) stopBackgroundMusic()
+        else startBackgroundMusic()
+    }
+
+    fun toggleSound(enabled: Boolean) {
+        isSoundEnabled = enabled
     }
 }

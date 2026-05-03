@@ -3,8 +3,6 @@ package edu.moravian.csci215.finalproject395_truthfulcheckers.screens
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,7 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.SoundManager
 import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
@@ -49,40 +48,18 @@ fun SettingsScreen(viewModel: GameViewModel) {
 
             if (isLandscape) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-                    // Column 1: Appearance & Language
                     Column(modifier = Modifier.weight(1f)) {
                         SectionLabel(strings.appearance)
-                        SettingDropdown(
-                            label = strings.theme,
-                            options = themes,
-                            selected = state.selectedTheme,
-                            onOptionSelected = { viewModel.setTheme(it) }
-                        )
+                        SettingDropdown(label = strings.theme, options = themes, selected = state.selectedTheme, onOptionSelected = { viewModel.setTheme(it) })
                         Spacer(Modifier.height(8.dp))
-                        SettingDropdown(
-                            label = strings.boardStyle,
-                            options = boardStyles,
-                            selected = state.selectedBoardStyle,
-                            onOptionSelected = { viewModel.setBoardStyle(it) }
-                        )
+                        SettingDropdown(label = strings.boardStyle, options = boardStyles, selected = state.selectedBoardStyle, onOptionSelected = { viewModel.setBoardStyle(it) })
                         Spacer(Modifier.height(8.dp))
-                        SettingDropdown(
-                            label = strings.language,
-                            options = languages,
-                            selected = state.selectedLanguage,
-                            onOptionSelected = { viewModel.setLanguage(it) }
-                        )
+                        SettingDropdown(label = strings.language, options = languages, selected = state.selectedLanguage, onOptionSelected = { viewModel.setLanguage(it) })
                     }
                     
-                    // Column 2: Game Settings & Audio
                     Column(modifier = Modifier.weight(1f)) {
                         SectionLabel(strings.gameSettings)
-                        SettingDropdown(
-                            label = strings.turnTimer,
-                            options = timerOptions,
-                            selected = state.turnTimerSetting,
-                            onOptionSelected = { viewModel.setTurnTimer(it) }
-                        )
+                        SettingDropdown(label = strings.turnTimer, options = timerOptions, selected = state.turnTimerSetting, onOptionSelected = { viewModel.setTurnTimer(it) })
                         
                         Spacer(Modifier.height(16.dp))
                         SectionLabel(strings.audio)
@@ -90,20 +67,19 @@ fun SettingsScreen(viewModel: GameViewModel) {
                             SettingSwitchCompact(
                                 label = strings.soundEffectsShort,
                                 checked = soundManager.isSoundEnabled,
-                                onCheckedChange = { soundManager.isSoundEnabled = it },
+                                onCheckedChange = { soundManager.toggleSound(it) },
                                 modifier = Modifier.weight(1f)
                             )
                             SettingSwitchCompact(
                                 label = strings.backgroundMusicShort,
                                 checked = soundManager.isMusicEnabled,
-                                onCheckedChange = { soundManager.isMusicEnabled = it },
+                                onCheckedChange = { soundManager.toggleMusic(it) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     }
                 }
             } else {
-                // Portrait Layout
                 SectionLabel(strings.appearance)
                 SettingDropdown(label = strings.theme, options = themes, selected = state.selectedTheme, onOptionSelected = { viewModel.setTheme(it) })
                 Spacer(Modifier.height(12.dp))
@@ -119,8 +95,8 @@ fun SettingsScreen(viewModel: GameViewModel) {
                 Spacer(Modifier.height(24.dp))
 
                 SectionLabel(strings.audio)
-                SettingSwitch(label = strings.soundEffects, checked = soundManager.isSoundEnabled, onCheckedChange = { soundManager.isSoundEnabled = it })
-                SettingSwitch(label = strings.backgroundMusic, checked = soundManager.isMusicEnabled, onCheckedChange = { soundManager.isMusicEnabled = it })
+                SettingSwitch(label = strings.soundEffects, checked = soundManager.isSoundEnabled, onCheckedChange = { soundManager.toggleSound(it) })
+                SettingSwitch(label = strings.backgroundMusic, checked = soundManager.isMusicEnabled, onCheckedChange = { soundManager.toggleMusic(it) })
             }
             
             Spacer(Modifier.height(32.dp))
@@ -132,7 +108,7 @@ fun SettingsScreen(viewModel: GameViewModel) {
 fun SectionLabel(text: String) {
     Column {
         Text(text = text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-        Divider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
     }
 }
 

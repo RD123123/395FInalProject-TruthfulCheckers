@@ -14,7 +14,11 @@ import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 
 @Composable
-fun GameModeScreen(viewModel: GameViewModel, onModeSelected: (Boolean) -> Unit, onBack: () -> Unit) {
+fun GameModeScreen(
+    viewModel: GameViewModel, 
+    onModeSelected: (Boolean) -> Unit,
+    onOnlineSelected: () -> Unit
+) {
     val state by viewModel.uiState.collectAsState()
     val strings = getStrings(state.selectedLanguage)
 
@@ -41,11 +45,19 @@ fun GameModeScreen(viewModel: GameViewModel, onModeSelected: (Boolean) -> Unit, 
                 Spacer(Modifier.height(16.dp))
                 ModeButton(strings.localMulti, { onModeSelected(false) }, Modifier.fillMaxWidth(0.7f))
             }
+
+            Spacer(Modifier.height(24.dp))
             
-            Spacer(Modifier.height(32.dp))
-            
-            TextButton(onClick = onBack) {
-                Text(strings.back, color = MaterialTheme.colorScheme.primary)
+            // Online Beta Button
+            Button(
+                onClick = onOnlineSelected,
+                modifier = if (isLandscape) Modifier.fillMaxWidth(0.5f) else Modifier.fillMaxWidth(0.7f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary
+                )
+            ) {
+                Text("Online Multiplayer (BETA coming soon)")
             }
         }
     }

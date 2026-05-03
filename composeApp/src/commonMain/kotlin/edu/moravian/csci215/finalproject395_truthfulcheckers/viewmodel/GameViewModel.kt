@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.math.abs
+import kotlin.random.Random
 
 data class GameUiState(
     val board: List<List<Piece?>> = List(8) { List(8) { null } },
@@ -26,6 +27,7 @@ data class GameUiState(
     val pendingMove: Pair<Position, Position>? = null,
     val isConfusedState: PlayerColor? = null,
     val isAiThinking: Boolean = false,
+    val isVsAi: Boolean = true,
     val difficulty: String = "Medium",
     val isLoading: Boolean = false,
     val isCoinFlipping: Boolean = false,
@@ -36,7 +38,7 @@ data class GameUiState(
     val remainingTime: Int? = null,
     val isMultiJumpActive: Boolean = false,
     val player1Name: String = "Player 1",
-    val player2Name: String = "Player 2",
+    val player2Name: String = "AI Bot",
     val drawCounter: Int = 0,
     val selectedLanguage: String = "English",
     val categories: List<TriviaCategory> = emptyList(),
@@ -52,6 +54,7 @@ class GameViewModel(
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var aiJob: Job? = null
 
     init {
         loadCategories()
@@ -67,6 +70,13 @@ class GameViewModel(
         }
     }
 
+    fun setVsAi(vsAi: Boolean) {
+        _uiState.update { it.copy(
+            isVsAi = vsAi,
+            player2Name = if (vsAi) "AI Bot" else "Player 2"
+        ) }
+    }
+
     fun setCategory(category: TriviaCategory) {
         _uiState.update { it.copy(selectedCategory = category) }
     }
@@ -78,7 +88,7 @@ class GameViewModel(
     fun setPlayerNames(p1: String, p2: String) {
         _uiState.update { it.copy(
             player1Name = p1.ifBlank { "Player 1" },
-            player2Name = p2.ifBlank { "Player 2" }
+            player2Name = p2.ifBlank { if (it.isVsAi) "AI Bot" else "Player 2" }
         ) }
     }
 
@@ -104,6 +114,8 @@ class GameViewModel(
 
     fun resetGame() {
         stopTimer()
+        aiJob?.cancel() // Kill any active AI logic before starting a new game
+        
         viewModelScope.launch {
             val strings = getStrings(_uiState.value.selectedLanguage)
             val initialBoard = List(8) { row ->
@@ -126,21 +138,26 @@ class GameViewModel(
                     isTie = false,
                     remainingTime = null,
                     isMultiJumpActive = false,
+                    isAiThinking = false,
+                    selectedPosition = null,
+                    validMoves = emptyList(),
+                    pendingMove = null,
                     currentQuestion = null,
                     drawCounter = 0,
                     errorMessage = null
                 ) 
             }
+            
             delay(2000) 
             
-            val goesFirst = if ((0..1).random() == 0) PlayerColor.RED else PlayerColor.BLUE
+            // True random flip logic to avoid P2 bias
+            val goesFirst = if (Random.nextBoolean()) PlayerColor.RED else PlayerColor.BLUE
             val winnerName = if (goesFirst == PlayerColor.RED) _uiState.value.player1Name else _uiState.value.player2Name
             val message = "$winnerName ${strings.winsFlip}"
             
-            val finalBoard = calculateEmotions(initialBoard, goesFirst, null)
             _uiState.update { 
                 it.copy(
-                    board = finalBoard,
+                    board = calculateEmotions(initialBoard, goesFirst, null),
                     currentPlayer = goesFirst,
                     firstPlayerMessage = message,
                     isCoinFlipping = false
@@ -148,15 +165,11 @@ class GameViewModel(
             }
             
             saveSession()
-            
             delay(1500)
             _uiState.update { it.copy(firstPlayerMessage = null) }
             
             startTurnTimer()
-            
-            if (goesFirst == PlayerColor.BLUE) {
-                runAi()
-            }
+            checkAiTurn()
         }
     }
 
@@ -170,12 +183,11 @@ class GameViewModel(
                     currentPlayer = state.currentPlayer,
                     selectedCategoryName = state.selectedCategory?.name ?: "General",
                     selectedCategoryId = state.selectedCategory?.id ?: 9,
+                    isVsAi = state.isVsAi,
                     boardData = Json.encodeToString(state.board)
                 )
                 repository.saveSession(session)
-            } catch (e: Exception) {
-                // Ignore session save errors to prevent crashes
-            }
+            } catch (e: Exception) { }
         }
     }
 
@@ -394,6 +406,7 @@ class GameViewModel(
 
     fun forfeit() {
         stopTimer()
+        aiJob?.cancel()
         val loser = _uiState.value.currentPlayer
         val winner = if (loser == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
         _uiState.update { it.copy(winner = winner) }
@@ -471,18 +484,20 @@ class GameViewModel(
 
     private fun checkAiTurn() {
         val state = _uiState.value
-        if (state.winner == null && !state.isTie && state.currentPlayer == PlayerColor.BLUE) { 
+        // Only run AI if BLUE is the current player AND we are in VS AI mode
+        if (state.isVsAi && state.winner == null && !state.isTie && state.currentPlayer == PlayerColor.BLUE) { 
             runAi()
         }
     }
 
     private fun runAi() {
-        viewModelScope.launch {
+        aiJob?.cancel() 
+        aiJob = viewModelScope.launch {
             _uiState.update { it.copy(isAiThinking = true) }
             delay(1500)
             
             var state = _uiState.value
-            while (state.currentPlayer == PlayerColor.BLUE && state.winner == null && !state.isTie) {
+            while (state.isVsAi && state.currentPlayer == PlayerColor.BLUE && state.winner == null && !state.isTie) {
                 val allMoves = mutableListOf<Pair<Position, Position>>()
                 if (state.isMultiJumpActive && state.selectedPosition != null) {
                     getJumpMovesOnly(state.selectedPosition!!, state.board).forEach { to ->
@@ -515,14 +530,10 @@ class GameViewModel(
 
                 _uiState.update { it.copy(pendingMove = selectedMove) }
                 
-                if ((0..10).random() > 1) { 
-                    executeMove()
-                    state = _uiState.value 
-                    if (state.isMultiJumpActive) delay(1000) 
-                } else {
-                    onAnswerQuestion(false)
-                    break
-                }
+                // AI executes the move automatically
+                executeMove()
+                state = _uiState.value // Re-sync state for loop condition
+                if (state.isMultiJumpActive) delay(1000) 
             }
             _uiState.update { it.copy(isAiThinking = false) }
         }

@@ -43,13 +43,14 @@ fun commonModule() = module {
         val sDao: StatsDao = get()
         val gDao: GameSessionDao = get()
         val client: HttpClient = get()
-        GameRepository(tDao, sDao, gDao, client) 
+        GameRepository(tDao, sDao, gDao, client)
     }
     
-    factory { 
+    // Changed to single to ensure the GameMode and state persist across screen changes
+    single { 
         val repo: GameRepository = get()
-        val sound: SoundManager = get()
-        GameViewModel(repo, sound) 
+        val sm: SoundManager = get()
+        GameViewModel(repo, sm) 
     }
 }
 

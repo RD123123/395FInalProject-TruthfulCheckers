@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "a473f887088b3c26626191465ea495c7",
+    "identityHash": "de250486074b18b0aed2f79f160cd7fa",
     "entities": [
       {
         "tableName": "trivia_questions",
@@ -102,7 +102,7 @@
       },
       {
         "tableName": "game_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `player1Name` TEXT NOT NULL, `player2Name` TEXT NOT NULL, `currentPlayer` TEXT NOT NULL, `selectedCategoryName` TEXT NOT NULL, `selectedCategoryId` INTEGER NOT NULL, `p1Score` INTEGER NOT NULL, `p2Score` INTEGER NOT NULL, `turnCount` INTEGER NOT NULL, `boardData` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `player1Name` TEXT NOT NULL, `player2Name` TEXT NOT NULL, `currentPlayer` TEXT NOT NULL, `selectedCategoryName` TEXT NOT NULL, `selectedCategoryId` INTEGER NOT NULL, `isVsAi` INTEGER NOT NULL, `boardData` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -141,20 +141,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "p1Score",
-            "columnName": "p1Score",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "p2Score",
-            "columnName": "p2Score",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "turnCount",
-            "columnName": "turnCount",
+            "fieldPath": "isVsAi",
+            "columnName": "isVsAi",
             "affinity": "INTEGER",
             "notNull": true
           },
@@ -175,7 +163,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a473f887088b3c26626191465ea495c7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'de250486074b18b0aed2f79f160cd7fa')"
     ]
   }
 }

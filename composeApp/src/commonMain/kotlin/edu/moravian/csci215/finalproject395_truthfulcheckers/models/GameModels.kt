@@ -59,8 +59,6 @@ data class GameSession(
     val currentPlayer: PlayerColor,
     val selectedCategoryName: String,
     val selectedCategoryId: Int,
-    val p1Score: Int = 0,
-    val p2Score: Int = 0,
-    val turnCount: Int = 0,
+    val isVsAi: Boolean = true,
     val boardData: String 
 )

@@ -37,27 +37,31 @@ fun SetupScreen(viewModel: GameViewModel, onStartGame: (String, String, String, 
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = strings.gameSetup, 
+                text = if (state.isVsAi) strings.gameSetup else "Local Match Setup", 
                 style = MaterialTheme.typography.displaySmall, 
                 color = MaterialTheme.colorScheme.primary
             )
             
             Spacer(Modifier.height(if (isLandscape) 16.dp else 24.dp))
 
-            // Player Names
+            // Player 1 Name
             OutlinedTextField(
                 value = p1Name,
                 onValueChange = { if (!it.contains("\n")) p1Name = it },
-                label = { Text(strings.p1Name) },
+                label = { Text(if (state.isVsAi) "Your Name" else "Player 1 Name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(if (isLandscape) 0.6f else 0.9f),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
+            
             Spacer(Modifier.height(8.dp))
+            
+            // Player 2 / AI Name
             OutlinedTextField(
                 value = p2Name,
                 onValueChange = { if (!it.contains("\n")) p2Name = it },
-                label = { Text(strings.p2Name) },
+                label = { Text(if (state.isVsAi) "AI Bot Name (Optional)" else "Player 2 Name") },
+                placeholder = { if (state.isVsAi) Text("AI Bot") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(if (isLandscape) 0.6f else 0.9f),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
@@ -95,11 +99,12 @@ fun SetupScreen(viewModel: GameViewModel, onStartGame: (String, String, String, 
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
-
-            // Difficulty
-            Text(text = strings.aiDifficulty, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            DifficultySelector(difficulty, { difficulty = it })
+            // Hide Difficulty for Local Multiplayer
+            if (state.isVsAi) {
+                Spacer(Modifier.height(24.dp))
+                Text(text = strings.aiDifficulty, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                DifficultySelector(difficulty, { difficulty = it })
+            }
             
             Spacer(Modifier.height(32.dp))
             

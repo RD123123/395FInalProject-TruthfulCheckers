@@ -34,7 +34,7 @@ import truthfulcheckers.composeapp.generated.resources.Res
 import truthfulcheckers.composeapp.generated.resources.spritesheet
 
 enum class TruthfulCheckersScreen {
-    Home, GameMode, Setup, MainGame, Results, Instructions, Settings
+    Home, GameMode, Setup, MainGame, Results, Instructions, Settings, OnlineBeta
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,6 +64,7 @@ fun App() {
         TruthfulCheckersScreen.Results -> strings.gameOver
         TruthfulCheckersScreen.Instructions -> strings.howToPlay
         TruthfulCheckersScreen.Settings -> strings.settings
+        TruthfulCheckersScreen.OnlineBeta -> "Online Beta"
     }
 
     // Stop music if we navigate away from the game or results screen
@@ -80,7 +81,11 @@ fun App() {
                     CenterAlignedTopAppBar(
                         title = { Text(screenTitle) },
                         navigationIcon = {
-                            if (navController.previousBackStackEntry != null) {
+                            val canPop = navController.previousBackStackEntry != null
+                            // Hide back arrow ONLY on MainGame screen as per user request
+                            val isMainGame = currentScreen == TruthfulCheckersScreen.MainGame
+                            
+                            if (canPop && !isMainGame) {
                                 IconButton(onClick = { navController.popBackStack() }) {
                                     Icon(Icons.Default.ArrowBack, contentDescription = strings.back)
                                 }
@@ -127,11 +132,18 @@ fun App() {
                     composable(route = TruthfulCheckersScreen.GameMode.name) {
                         GameModeScreen(
                             viewModel = viewModel,
-                            onModeSelected = { _ ->
+                            onModeSelected = { vsAi ->
+                                viewModel.setVsAi(vsAi)
                                 scope.launch { navigateWithLoading(navController, TruthfulCheckersScreen.Setup.name, viewModel) }
                             },
-                            onBack = { navController.popBackStack() }
+                            onOnlineSelected = {
+                                navController.navigate(TruthfulCheckersScreen.OnlineBeta.name)
+                            }
                         )
+                    }
+
+                    composable(route = TruthfulCheckersScreen.OnlineBeta.name) {
+                        OnlineBetaScreen(viewModel = viewModel)
                     }
 
                     composable(route = TruthfulCheckersScreen.Setup.name) {
