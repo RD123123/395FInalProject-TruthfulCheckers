@@ -368,6 +368,11 @@ class GameViewModel(
             state.showQuestion
         ) return
 
+        // Block human input during AI turn in single player
+        if (state.isVsAi && state.currentPlayer == PlayerColor.BLUE) {
+            return
+        }
+
         if (!isValidBoardPosition(position, state.board)) return
 
         val piece = state.board[position.row][position.col]
@@ -531,10 +536,14 @@ class GameViewModel(
         stopTimer()
         aiJob?.cancel()
 
-        val loser = _uiState.value.currentPlayer
-        val winner =
-            if (loser == PlayerColor.RED) PlayerColor.BLUE
-            else PlayerColor.RED
+        val winner = if (_uiState.value.isVsAi) {
+            // In single player, the human always loses when forfeiting
+            PlayerColor.BLUE
+        } else {
+            // In local multiplayer, current player forfeits
+            val loser = _uiState.value.currentPlayer
+            if (loser == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
+        }
 
         _uiState.update { it.copy(winner = winner) }
 
