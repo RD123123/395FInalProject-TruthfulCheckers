@@ -9,12 +9,13 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.googleServices)
 }
 
 kotlin {
     androidTarget {
         compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
+            jvmTarget.set(JvmTarget.JVM_17)
             freeCompilerArgs.add("-Xexpect-actual-classes")
         }
     }
@@ -34,12 +35,9 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
-
             implementation(libs.koin.android)
-
             implementation(libs.ktor.client.okhttp)
 
-            // Android-only lifecycle
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
         }
@@ -53,7 +51,6 @@ kotlin {
             implementation(libs.compose.materialIconsExtended)
 
             implementation(libs.kotlinx.serialization.json)
-
             implementation(libs.androidx.navigation.compose)
 
             implementation(libs.ktor.client.core)
@@ -67,6 +64,10 @@ kotlin {
             implementation(libs.koin.compose)
 
             implementation(libs.datastore.preferences)
+
+            implementation("dev.gitlive:firebase-app:2.1.0")
+            implementation("dev.gitlive:firebase-database:2.1.0")
+            implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
         }
 
         iosMain.dependencies {
@@ -91,18 +92,12 @@ dependencies {
 
 android {
     namespace = "edu.moravian.csci215.finalproject395_truthfulcheckers"
-
-    // ✅ FIXED (no longer using version catalog)
     compileSdk = 36
 
     defaultConfig {
         applicationId = "edu.moravian.csci215.finalproject395_truthfulcheckers"
-
         minSdk = libs.versions.android.minSdk.get().toInt()
-
-        // ✅ FIXED
         targetSdk = 36
-
         versionCode = 1
         versionName = "1.0"
     }
@@ -120,7 +115,7 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }

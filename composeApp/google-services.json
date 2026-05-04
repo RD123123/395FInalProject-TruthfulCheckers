@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "654389353409",
+    "project_id": "truthfulcheckers",
+    "storage_bucket": "truthfulcheckers.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654389353409:android:547ea7409f3a5454042d40",
+        "android_client_info": {
+          "package_name": "edu.moravian.csci215.finalproject395_truthfulcheckers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACwnzDg5y58sluE9p4C0LZtboccVTHhOs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

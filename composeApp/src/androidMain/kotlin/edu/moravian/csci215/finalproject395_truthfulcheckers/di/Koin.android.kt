@@ -5,6 +5,8 @@ import androidx.room.Room
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.AppDatabase
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.AppDatabaseConstructor
+import edu.moravian.csci215.finalproject395_truthfulcheckers.data.FirebaseOnlineGameRepository
+import edu.moravian.csci215.finalproject395_truthfulcheckers.data.OnlineGameRepository
 import org.koin.dsl.module
 
 actual fun platformModule() = module {
@@ -23,4 +25,6 @@ actual fun platformModule() = module {
     single { get<AppDatabase>().triviaDao() }
     single { get<AppDatabase>().statsDao() }
     single { get<AppDatabase>().gameSessionDao() }
+
+    single<OnlineGameRepository> { FirebaseOnlineGameRepository() }
 }

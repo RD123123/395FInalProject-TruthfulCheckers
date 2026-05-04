@@ -15,7 +15,7 @@ import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewM
 
 @Composable
 fun GameModeScreen(
-    viewModel: GameViewModel, 
+    viewModel: GameViewModel,
     onModeSelected: (Boolean) -> Unit,
     onOnlineSelected: () -> Unit
 ) {
@@ -24,40 +24,37 @@ fun GameModeScreen(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         val isLandscape = maxWidth > maxHeight
-        
+
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text(strings.selectMode, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-            
+            Text(
+                text = strings.selectMode,
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+
             Spacer(Modifier.height(if (isLandscape) 24.dp else 48.dp))
-            
+
             if (isLandscape) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
                     ModeButton(strings.vsAi, { onModeSelected(true) }, Modifier.weight(1f))
                     Spacer(Modifier.width(16.dp))
                     ModeButton(strings.localMulti, { onModeSelected(false) }, Modifier.weight(1f))
+                    Spacer(Modifier.width(16.dp))
+                    ModeButton("Online Play", onOnlineSelected, Modifier.weight(1f))
                 }
             } else {
                 ModeButton(strings.vsAi, { onModeSelected(true) }, Modifier.fillMaxWidth(0.7f))
                 Spacer(Modifier.height(16.dp))
                 ModeButton(strings.localMulti, { onModeSelected(false) }, Modifier.fillMaxWidth(0.7f))
-            }
-
-            Spacer(Modifier.height(24.dp))
-            
-            // Online Beta Button
-            Button(
-                onClick = onOnlineSelected,
-                modifier = if (isLandscape) Modifier.fillMaxWidth(0.5f) else Modifier.fillMaxWidth(0.7f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary
-                )
-            ) {
-                Text("Online Multiplayer (BETA coming soon)")
+                Spacer(Modifier.height(16.dp))
+                ModeButton("Online Play", onOnlineSelected, Modifier.fillMaxWidth(0.7f))
             }
         }
     }

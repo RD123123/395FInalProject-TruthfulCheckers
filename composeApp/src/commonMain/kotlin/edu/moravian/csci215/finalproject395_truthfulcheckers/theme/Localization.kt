@@ -47,7 +47,27 @@ data class AppStrings(
     val customDesc: String,
     val appearance: String,
     val gameSettings: String,
-    val audio: String
+    val audio: String,
+
+    val onlineMultiplayer: String,
+    val createRoom: String,
+    val joinRoom: String,
+    val createGame: String,
+    val joinGame: String,
+    val yourName: String,
+    val roomCode: String,
+    val startRoom: String,
+    val room: String,
+    val you: String,
+    val spectating: String,
+    val category: String,
+    val difficulty: String,
+    val opponentsTurn: String,
+    val waiting: String,
+    val waitingForOpponent: String,
+    val shareCode: String,
+    val roomClosed: String,
+    val roomClosedMessage: String
 )
 
 val EnglishStrings = AppStrings(
@@ -97,7 +117,27 @@ val EnglishStrings = AppStrings(
     customDesc = "Go to the Setup screen before starting a game to change categories and difficulty for a fresh challenge.",
     appearance = "Appearance",
     gameSettings = "Game Settings",
-    audio = "Audio"
+    audio = "Audio",
+
+    onlineMultiplayer = "Online Multiplayer",
+    createRoom = "Create Room",
+    joinRoom = "Join Room",
+    createGame = "Create Game",
+    joinGame = "Join Game",
+    yourName = "Your Name",
+    roomCode = "6-Digit Room Code",
+    startRoom = "Start Room",
+    room = "Room",
+    you = "You",
+    spectating = "Spectating",
+    category = "Category",
+    difficulty = "Difficulty",
+    opponentsTurn = "Opponent's Turn",
+    waiting = "Waiting...",
+    waitingForOpponent = "Waiting for opponent to join...",
+    shareCode = "Share code",
+    roomClosed = "Room Closed",
+    roomClosedMessage = "The room has been closed."
 )
 
 val SpanishStrings = AppStrings(
@@ -147,7 +187,27 @@ val SpanishStrings = AppStrings(
     customDesc = "Ve a la pantalla de Configuración antes de empezar para cambiar categorías y dificultad.",
     appearance = "Apariencia",
     gameSettings = "Ajustes de Juego",
-    audio = "Audio"
+    audio = "Audio",
+
+    onlineMultiplayer = "Multijugador en Línea",
+    createRoom = "Crear Sala",
+    joinRoom = "Unirse a Sala",
+    createGame = "Crear Juego",
+    joinGame = "Unirse al Juego",
+    yourName = "Tu Nombre",
+    roomCode = "Código de Sala de 6 Dígitos",
+    startRoom = "Iniciar Sala",
+    room = "Sala",
+    you = "Tú",
+    spectating = "Espectador",
+    category = "Categoría",
+    difficulty = "Dificultad",
+    opponentsTurn = "Turno del Oponente",
+    waiting = "Esperando...",
+    waitingForOpponent = "Esperando a que se una el oponente...",
+    shareCode = "Comparte el código",
+    roomClosed = "Sala Cerrada",
+    roomClosedMessage = "La sala ha sido cerrada."
 )
 
 val FrenchStrings = AppStrings(
@@ -197,7 +257,27 @@ val FrenchStrings = AppStrings(
     customDesc = "Allez dans la configuration avant de commencer pour changer les catégories et la difficulté.",
     appearance = "Apparence",
     gameSettings = "Paramètres de Jeu",
-    audio = "Audio"
+    audio = "Audio",
+
+    onlineMultiplayer = "Multijoueur en Ligne",
+    createRoom = "Créer une Salle",
+    joinRoom = "Rejoindre une Salle",
+    createGame = "Créer une Partie",
+    joinGame = "Rejoindre la Partie",
+    yourName = "Votre Nom",
+    roomCode = "Code de Salle à 6 Chiffres",
+    startRoom = "Démarrer la Salle",
+    room = "Salle",
+    you = "Vous",
+    spectating = "Spectateur",
+    category = "Catégorie",
+    difficulty = "Difficulté",
+    opponentsTurn = "Tour de l'Adversaire",
+    waiting = "En attente...",
+    waitingForOpponent = "En attente de l'adversaire...",
+    shareCode = "Partager le code",
+    roomClosed = "Salle Fermée",
+    roomClosedMessage = "La salle a été fermée."
 )
 
 fun getStrings(language: String): AppStrings {

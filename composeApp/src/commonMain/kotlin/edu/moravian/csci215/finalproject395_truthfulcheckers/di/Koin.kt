@@ -3,10 +3,12 @@ package edu.moravian.csci215.finalproject395_truthfulcheckers.di
 import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.AudioPlayer
 import edu.moravian.csci215.finalproject395_truthfulcheckers.audio.SoundManager
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.GameRepository
+import edu.moravian.csci215.finalproject395_truthfulcheckers.data.OnlineGameRepository
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.TriviaDao
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.StatsDao
 import edu.moravian.csci215.finalproject395_truthfulcheckers.data.GameSessionDao
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
+import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.OnlineGameViewModel
 import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
@@ -46,11 +48,17 @@ fun commonModule() = module {
         GameRepository(tDao, sDao, gDao, client)
     }
     
-    // Changed to single to ensure the GameMode and state persist across screen changes
     single { 
         val repo: GameRepository = get()
         val sm: SoundManager = get()
         GameViewModel(repo, sm) 
+    }
+
+    single {
+        val onlineRepo: OnlineGameRepository = get()
+        val gameRepo: GameRepository = get()
+        val sm: SoundManager = get()
+        OnlineGameViewModel(onlineRepo, gameRepo, sm)
     }
 }
 

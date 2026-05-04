@@ -325,7 +325,7 @@ fun CheckerPiece(piece: Piece) {
             )
         }
         
-        if (piece.isKing) {
+        if (piece.king) {
             Text(
                 text = "👑",
                 fontSize = 24.sp,

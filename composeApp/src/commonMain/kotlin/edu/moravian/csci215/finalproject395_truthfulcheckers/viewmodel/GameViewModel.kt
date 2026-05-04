@@ -321,7 +321,7 @@ class GameViewModel(
     }
 
     private fun getMoveDirections(piece: Piece): List<Int> {
-        return if (piece.isKing) {
+        return if (piece.king) {
             listOf(-1, 1)
         } else if (piece.color == PlayerColor.RED) {
             listOf(-1)
@@ -603,7 +603,7 @@ class GameViewModel(
             (piece.color == PlayerColor.RED && to.row == 0) ||
             (piece.color == PlayerColor.BLUE && to.row == 7)
         ) {
-            updatedPiece = piece.copy(isKing = true)
+            updatedPiece = piece.copy(king = true)
             newBoard[to.row][to.col] = updatedPiece
         }
 
@@ -774,21 +774,16 @@ class GameViewModel(
 
     private fun checkWinCondition(board: List<List<Piece?>>) {
         val pieces = board.flatten().filterNotNull()
+
         val redCount = pieces.count { it.color == PlayerColor.RED }
         val blueCount = pieces.count { it.color == PlayerColor.BLUE }
 
         if (redCount == 0) {
             _uiState.update { it.copy(winner = PlayerColor.BLUE) }
-
-            safeLaunch {
-                repository.clearSession()
-            }
+            safeLaunch { repository.clearSession() }
         } else if (blueCount == 0) {
             _uiState.update { it.copy(winner = PlayerColor.RED) }
-
-            safeLaunch {
-                repository.clearSession()
-            }
+            safeLaunch { repository.clearSession() }
         }
     }
 }
