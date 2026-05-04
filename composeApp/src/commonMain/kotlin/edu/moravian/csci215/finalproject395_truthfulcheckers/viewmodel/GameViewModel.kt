@@ -50,6 +50,7 @@ class GameViewModel(
     private val repository: GameRepository,
     private val soundManager: SoundManager
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
@@ -60,10 +61,22 @@ class GameViewModel(
         loadCategories()
     }
 
-    private fun loadCategories() {
+    private fun safeLaunch(block: suspend () -> Unit) {
         viewModelScope.launch {
+            try {
+                block()
+            } catch (e: Exception) {
+                println("GAMEVIEWMODEL CRASH CAUGHT: $e")
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun loadCategories() {
+        safeLaunch {
             val cats = repository.getCategories()
             _uiState.update { it.copy(categories = cats) }
+
             if (cats.isNotEmpty() && _uiState.value.selectedCategory == null) {
                 _uiState.update { it.copy(selectedCategory = cats.first()) }
             }
@@ -71,10 +84,12 @@ class GameViewModel(
     }
 
     fun setVsAi(vsAi: Boolean) {
-        _uiState.update { it.copy(
-            isVsAi = vsAi,
-            player2Name = if (vsAi) "AI Bot" else "Player 2"
-        ) }
+        _uiState.update {
+            it.copy(
+                isVsAi = vsAi,
+                player2Name = if (vsAi) "AI Bot" else "Player 2"
+            )
+        }
     }
 
     fun setCategory(category: TriviaCategory) {
@@ -86,10 +101,12 @@ class GameViewModel(
     }
 
     fun setPlayerNames(p1: String, p2: String) {
-        _uiState.update { it.copy(
-            player1Name = p1.ifBlank { "Player 1" },
-            player2Name = p2.ifBlank { if (it.isVsAi) "AI Bot" else "Player 2" }
-        ) }
+        _uiState.update {
+            it.copy(
+                player1Name = p1.ifBlank { "Player 1" },
+                player2Name = p2.ifBlank { if (it.isVsAi) "AI Bot" else "Player 2" }
+            )
+        }
     }
 
     fun setTheme(theme: String) {
@@ -114,10 +131,11 @@ class GameViewModel(
 
     fun resetGame() {
         stopTimer()
-        aiJob?.cancel() // Kill any active AI logic before starting a new game
-        
-        viewModelScope.launch {
+        aiJob?.cancel()
+
+        safeLaunch {
             val strings = getStrings(_uiState.value.selectedLanguage)
+
             val initialBoard = List(8) { row ->
                 List(8) { col ->
                     when {
@@ -127,14 +145,14 @@ class GameViewModel(
                     }
                 }
             }
-            
+
             soundManager.startBackgroundMusic()
-            
-            _uiState.update { 
+
+            _uiState.update {
                 it.copy(
-                    isCoinFlipping = true, 
-                    firstPlayerMessage = null, 
-                    winner = null, 
+                    isCoinFlipping = true,
+                    firstPlayerMessage = null,
+                    winner = null,
                     isTie = false,
                     remainingTime = null,
                     isMultiJumpActive = false,
@@ -143,31 +161,35 @@ class GameViewModel(
                     validMoves = emptyList(),
                     pendingMove = null,
                     currentQuestion = null,
+                    showQuestion = false,
+                    board = initialBoard,
                     drawCounter = 0,
                     errorMessage = null
-                ) 
+                )
             }
-            
-            delay(2000) 
-            
-            // True random flip logic to avoid P2 bias
+
+            delay(2000)
+
             val goesFirst = if (Random.nextBoolean()) PlayerColor.RED else PlayerColor.BLUE
-            val winnerName = if (goesFirst == PlayerColor.RED) _uiState.value.player1Name else _uiState.value.player2Name
-            val message = "$winnerName ${strings.winsFlip}"
-            
-            _uiState.update { 
+            val winnerName =
+                if (goesFirst == PlayerColor.RED) _uiState.value.player1Name
+                else _uiState.value.player2Name
+
+            _uiState.update {
                 it.copy(
                     board = calculateEmotions(initialBoard, goesFirst, null),
                     currentPlayer = goesFirst,
-                    firstPlayerMessage = message,
+                    firstPlayerMessage = "$winnerName ${strings.winsFlip}",
                     isCoinFlipping = false
-                ) 
+                )
             }
-            
+
             saveSession()
+
             delay(1500)
+
             _uiState.update { it.copy(firstPlayerMessage = null) }
-            
+
             startTurnTimer()
             checkAiTurn()
         }
@@ -175,24 +197,25 @@ class GameViewModel(
 
     private fun saveSession() {
         val state = _uiState.value
-        viewModelScope.launch {
-            try {
-                val session = GameSession(
-                    player1Name = state.player1Name,
-                    player2Name = state.player2Name,
-                    currentPlayer = state.currentPlayer,
-                    selectedCategoryName = state.selectedCategory?.name ?: "General",
-                    selectedCategoryId = state.selectedCategory?.id ?: 9,
-                    isVsAi = state.isVsAi,
-                    boardData = Json.encodeToString(state.board)
-                )
-                repository.saveSession(session)
-            } catch (e: Exception) { }
+
+        safeLaunch {
+            val session = GameSession(
+                player1Name = state.player1Name,
+                player2Name = state.player2Name,
+                currentPlayer = state.currentPlayer,
+                selectedCategoryName = state.selectedCategory?.name ?: "General",
+                selectedCategoryId = state.selectedCategory?.id ?: 9,
+                isVsAi = state.isVsAi,
+                boardData = Json.encodeToString(state.board)
+            )
+
+            repository.saveSession(session)
         }
     }
 
     private fun startTurnTimer() {
         stopTimer()
+
         val setting = _uiState.value.turnTimerSetting
         if (setting == "Off") return
 
@@ -200,12 +223,22 @@ class GameViewModel(
         _uiState.update { it.copy(remainingTime = seconds) }
 
         timerJob = viewModelScope.launch {
-            while (_uiState.value.remainingTime != null && _uiState.value.remainingTime!! > 0) {
-                delay(1000)
-                _uiState.update { it.copy(remainingTime = it.remainingTime?.minus(1)) }
-            }
-            if (_uiState.value.remainingTime == 0) {
-                onTimeOut()
+            try {
+                while ((_uiState.value.remainingTime ?: 0) > 0) {
+                    delay(1000)
+
+                    _uiState.update {
+                        val current = it.remainingTime ?: 0
+                        it.copy(remainingTime = (current - 1).coerceAtLeast(0))
+                    }
+                }
+
+                if (_uiState.value.remainingTime == 0) {
+                    onTimeOut()
+                }
+            } catch (e: Exception) {
+                println("TIMER CRASH CAUGHT: $e")
+                e.printStackTrace()
             }
         }
     }
@@ -220,8 +253,13 @@ class GameViewModel(
         onAnswerQuestion(false)
     }
 
-    private fun calculateEmotions(board: List<List<Piece?>>, currentPlayer: PlayerColor, confusedPlayer: PlayerColor?): List<List<Piece?>> {
+    private fun calculateEmotions(
+        board: List<List<Piece?>>,
+        currentPlayer: PlayerColor,
+        confusedPlayer: PlayerColor?
+    ): List<List<Piece?>> {
         if (board.isEmpty()) return board
+
         return board.mapIndexed { r, row ->
             row.mapIndexed { c, piece ->
                 piece?.let { p ->
@@ -239,24 +277,38 @@ class GameViewModel(
     }
 
     private fun canPieceJump(pos: Position, board: List<List<Piece?>>): Boolean {
-        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return false
+        if (!isValidBoardPosition(pos, board)) return false
         return getJumpMovesOnly(pos, board).isNotEmpty()
     }
 
+    private fun isValidBoardPosition(pos: Position, board: List<List<Piece?>>): Boolean {
+        return board.size == 8 &&
+                pos.row in 0..7 &&
+                pos.col in 0..7 &&
+                board[pos.row].size == 8
+    }
+
     private fun getJumpMovesOnly(pos: Position, board: List<List<Piece?>>): List<Position> {
-        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return emptyList()
+        if (!isValidBoardPosition(pos, board)) return emptyList()
+
         val piece = board[pos.row][pos.col] ?: return emptyList()
         val moves = mutableListOf<Position>()
-        val directions = if (piece.isKing) listOf(-1, 1) else if (piece.color == PlayerColor.RED) listOf(-1) else listOf(1)
-        
+        val directions = getMoveDirections(piece)
+
         for (dr in directions) {
             for (dc in listOf(-1, 1)) {
                 val enemyR = pos.row + dr
                 val enemyC = pos.col + dc
-                val jumpR = pos.row + (dr * 2)
-                val jumpC = pos.col + (dc * 2)
-                
-                if (jumpR in 0..7 && jumpC in 0..7 && board[jumpR][jumpC] == null) {
+                val jumpR = pos.row + dr * 2
+                val jumpC = pos.col + dc * 2
+
+                if (
+                    enemyR in 0..7 &&
+                    enemyC in 0..7 &&
+                    jumpR in 0..7 &&
+                    jumpC in 0..7 &&
+                    board[jumpR][jumpC] == null
+                ) {
                     val enemyPiece = board[enemyR][enemyC]
                     if (enemyPiece != null && enemyPiece.color != piece.color) {
                         moves.add(Position(jumpR, jumpC))
@@ -264,94 +316,147 @@ class GameViewModel(
                 }
             }
         }
+
         return moves
     }
 
     private fun getMoveDirections(piece: Piece): List<Int> {
-        return if (piece.isKing) listOf(-1, 1) else if (piece.color == PlayerColor.RED) listOf(-1) else listOf(1)
+        return if (piece.isKing) {
+            listOf(-1, 1)
+        } else if (piece.color == PlayerColor.RED) {
+            listOf(-1)
+        } else {
+            listOf(1)
+        }
     }
 
     private fun isPieceThreatened(pos: Position, board: List<List<Piece?>>): Boolean {
-        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return false
+        if (!isValidBoardPosition(pos, board)) return false
+
         val piece = board[pos.row][pos.col] ?: return false
+
         for (r in 0..7) {
             for (c in 0..7) {
                 val opponent = board[r][c]
+
                 if (opponent != null && opponent.color != piece.color) {
                     val oppJumps = getJumpMovesOnly(Position(r, c), board)
-                    if (oppJumps.any { jumpTo -> 
-                        val midR = (r + jumpTo.row) / 2
-                        val midC = (c + jumpTo.col) / 2
-                        midR == pos.row && midC == pos.col
-                    }) return true
+
+                    if (oppJumps.any { jumpTo ->
+                            val midR = (r + jumpTo.row) / 2
+                            val midC = (c + jumpTo.col) / 2
+                            midR == pos.row && midC == pos.col
+                        }
+                    ) {
+                        return true
+                    }
                 }
             }
         }
+
         return false
     }
 
     fun onCellClick(position: Position) {
-        if (_uiState.value.isAiThinking || _uiState.value.winner != null || _uiState.value.isCoinFlipping) return
-
         val state = _uiState.value
-        if (state.board.isEmpty()) return
-        
+
+        if (
+            state.isAiThinking ||
+            state.winner != null ||
+            state.isTie ||
+            state.isCoinFlipping ||
+            state.showQuestion
+        ) return
+
+        if (!isValidBoardPosition(position, state.board)) return
+
         val piece = state.board[position.row][position.col]
 
         if (state.selectedPosition == null) {
             if (piece?.color == state.currentPlayer) {
                 val moves = getValidMoves(position, state.board)
-                _uiState.update { it.copy(selectedPosition = position, validMoves = moves) }
+                _uiState.update {
+                    it.copy(
+                        selectedPosition = position,
+                        validMoves = moves
+                    )
+                }
             }
         } else {
             if (state.validMoves.contains(position)) {
-                _uiState.update { it.copy(pendingMove = state.selectedPosition to position) }
-                triggerQuestion()
-            } else {
-                if (!state.isMultiJumpActive) {
-                    _uiState.update { it.copy(selectedPosition = null, validMoves = emptyList()) }
+                val from = state.selectedPosition
+                if (from != null) {
+                    _uiState.update { it.copy(pendingMove = from to position) }
+                    triggerQuestion()
+                }
+            } else if (!state.isMultiJumpActive) {
+                _uiState.update {
+                    it.copy(
+                        selectedPosition = null,
+                        validMoves = emptyList()
+                    )
                 }
             }
         }
     }
 
     private fun getValidMoves(pos: Position, board: List<List<Piece?>>): List<Position> {
-        if (board.isEmpty() || pos.row >= board.size || pos.col >= board[0].size) return emptyList()
+        if (!isValidBoardPosition(pos, board)) return emptyList()
+
         val piece = board[pos.row][pos.col] ?: return emptyList()
+
         val jumps = getJumpMovesOnly(pos, board)
         if (jumps.isNotEmpty()) return jumps
-        
+
         val moves = mutableListOf<Position>()
         val directions = getMoveDirections(piece)
+
         for (dr in directions) {
             for (dc in listOf(-1, 1)) {
                 val nextR = pos.row + dr
                 val nextC = pos.col + dc
+
                 if (nextR in 0..7 && nextC in 0..7 && board[nextR][nextC] == null) {
                     moves.add(Position(nextR, nextC))
                 }
             }
         }
+
         return moves
     }
 
     private fun triggerQuestion() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        safeLaunch {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    errorMessage = null
+                )
+            }
+
             val catId = _uiState.value.selectedCategory?.id ?: 9
             val question = repository.getQuestion(catId)
-            
+
             if (question != null) {
-                _uiState.update { it.copy(currentQuestion = question, showQuestion = true, isLoading = false) }
+                _uiState.update {
+                    it.copy(
+                        currentQuestion = question,
+                        showQuestion = true,
+                        isLoading = false
+                    )
+                }
             } else {
-                _uiState.update { it.copy(
-                    isLoading = false,
-                    errorMessage = "Could not fetch trivia questions. Check your connection."
-                ) }
-                _uiState.update { it.copy(
-                    currentQuestion = TriviaQuestion(question = "Is the sky blue?", correctAnswer = true), 
-                    showQuestion = true
-                ) }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Could not fetch trivia questions. Check your connection.",
+                        currentQuestion = TriviaQuestion(
+                            question = "Is the sky blue?",
+                            correctAnswer = true
+                        ),
+                        showQuestion = true
+                    )
+                }
             }
         }
     }
@@ -359,10 +464,10 @@ class GameViewModel(
     fun onAnswerQuestion(answer: Boolean) {
         val state = _uiState.value
         val question = state.currentQuestion
-        val isCorrect = answer == question?.correctAnswer
-        
+        val isCorrect = question != null && answer == question.correctAnswer
+
         if (question != null) {
-            viewModelScope.launch {
+            safeLaunch {
                 repository.markQuestionAsUsed(question.id)
             }
         }
@@ -370,30 +475,41 @@ class GameViewModel(
         _uiState.update { it.copy(showQuestion = false) }
 
         if (isCorrect) {
-            _uiState.update { it.copy(currentQuestion = null) } 
+            _uiState.update { it.copy(currentQuestion = null) }
             executeMove()
         } else {
             stopTimer()
-            _uiState.update { it.copy(currentQuestion = null) } 
-            
-            val nextPlayer = if (state.currentPlayer == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
-            _uiState.update { it.copy(
-                isConfusedState = state.currentPlayer,
-                board = calculateEmotions(state.board, nextPlayer, state.currentPlayer),
-                currentPlayer = nextPlayer,
-                selectedPosition = null,
-                validMoves = emptyList(),
-                pendingMove = null,
-                isMultiJumpActive = false
-            ) }
-            
+
+            _uiState.update { it.copy(currentQuestion = null) }
+
+            val nextPlayer =
+                if (state.currentPlayer == PlayerColor.RED) PlayerColor.BLUE
+                else PlayerColor.RED
+
+            _uiState.update {
+                it.copy(
+                    isConfusedState = state.currentPlayer,
+                    board = calculateEmotions(state.board, nextPlayer, state.currentPlayer),
+                    currentPlayer = nextPlayer,
+                    selectedPosition = null,
+                    validMoves = emptyList(),
+                    pendingMove = null,
+                    isMultiJumpActive = false
+                )
+            }
+
             saveSession()
-            
-            viewModelScope.launch {
+
+            safeLaunch {
                 delay(3000)
-                _uiState.update { 
-                    it.copy(isConfusedState = null, board = calculateEmotions(it.board, it.currentPlayer, null))
+
+                _uiState.update {
+                    it.copy(
+                        isConfusedState = null,
+                        board = calculateEmotions(it.board, it.currentPlayer, null)
+                    )
                 }
+
                 startTurnTimer()
                 checkAiTurn()
             }
@@ -401,81 +517,138 @@ class GameViewModel(
     }
 
     fun cancelMove() {
-        _uiState.update { it.copy(showQuestion = false, selectedPosition = null, validMoves = emptyList(), pendingMove = null) }
+        _uiState.update {
+            it.copy(
+                showQuestion = false,
+                selectedPosition = null,
+                validMoves = emptyList(),
+                pendingMove = null
+            )
+        }
     }
 
     fun forfeit() {
         stopTimer()
         aiJob?.cancel()
+
         val loser = _uiState.value.currentPlayer
-        val winner = if (loser == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
+        val winner =
+            if (loser == PlayerColor.RED) PlayerColor.BLUE
+            else PlayerColor.RED
+
         _uiState.update { it.copy(winner = winner) }
-        viewModelScope.launch { repository.clearSession() }
+
+        safeLaunch {
+            repository.clearSession()
+        }
     }
 
     private fun executeMove() {
         stopTimer()
+
         val state = _uiState.value
-        val (from, to) = state.pendingMove ?: return
-        
+
+        val move = state.pendingMove ?: run {
+            println("EXECUTE MOVE STOPPED: pendingMove was null")
+            return
+        }
+
+        val (from, to) = move
+
+        if (!isValidBoardPosition(from, state.board) || !isValidBoardPosition(to, state.board)) {
+            println("EXECUTE MOVE STOPPED: invalid position")
+            return
+        }
+
         val newBoard = state.board.map { it.toMutableList() }
-        val piece = newBoard[from.row][from.col] ?: return
-        
+        val piece = newBoard[from.row][from.col] ?: run {
+            println("EXECUTE MOVE STOPPED: no piece at from position")
+            return
+        }
+
         newBoard[to.row][to.col] = piece
         newBoard[from.row][from.col] = null
 
         var captured = false
+
         if (abs(to.row - from.row) == 2) {
             val midR = (from.row + to.row) / 2
             val midC = (from.col + to.col) / 2
-            newBoard[midR][midC] = null
+
+            if (midR in 0..7 && midC in 0..7) {
+                newBoard[midR][midC] = null
+            }
+
             soundManager.playCaptureSound()
             captured = true
-            _uiState.update { it.copy(drawCounter = 0) } 
+
+            _uiState.update { it.copy(drawCounter = 0) }
         } else {
             soundManager.playMoveSound()
             _uiState.update { it.copy(drawCounter = it.drawCounter + 1) }
         }
-        
+
         var updatedPiece = piece
-        if ((piece.color == PlayerColor.RED && to.row == 0) || (piece.color == PlayerColor.BLUE && to.row == 7)) {
+
+        if (
+            (piece.color == PlayerColor.RED && to.row == 0) ||
+            (piece.color == PlayerColor.BLUE && to.row == 7)
+        ) {
             updatedPiece = piece.copy(isKing = true)
             newBoard[to.row][to.col] = updatedPiece
         }
 
         if (captured) {
             val nextJumps = getJumpMovesOnly(to, newBoard)
+
             if (nextJumps.isNotEmpty()) {
-                _uiState.update { it.copy(
-                    board = calculateEmotions(newBoard, it.currentPlayer, null),
-                    selectedPosition = to,
-                    validMoves = nextJumps,
-                    pendingMove = null,
-                    isMultiJumpActive = true
-                ) }
+                _uiState.update {
+                    it.copy(
+                        board = calculateEmotions(newBoard, it.currentPlayer, null),
+                        selectedPosition = to,
+                        validMoves = nextJumps,
+                        pendingMove = null,
+                        isMultiJumpActive = true
+                    )
+                }
+
                 saveSession()
                 startTurnTimer()
-                return 
+                return
             }
         }
 
         if (_uiState.value.drawCounter >= 40) {
-            _uiState.update { it.copy(isTie = true, winner = null) }
-            viewModelScope.launch { repository.clearSession() }
+            _uiState.update {
+                it.copy(
+                    isTie = true,
+                    winner = null
+                )
+            }
+
+            safeLaunch {
+                repository.clearSession()
+            }
+
             return
         }
 
-        val nextPlayer = if (state.currentPlayer == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
-        _uiState.update { it.copy(
-            board = calculateEmotions(newBoard, nextPlayer, null),
-            currentPlayer = nextPlayer,
-            selectedPosition = null,
-            validMoves = emptyList(),
-            pendingMove = null,
-            isConfusedState = null,
-            isMultiJumpActive = false
-        ) }
-        
+        val nextPlayer =
+            if (state.currentPlayer == PlayerColor.RED) PlayerColor.BLUE
+            else PlayerColor.RED
+
+        _uiState.update {
+            it.copy(
+                board = calculateEmotions(newBoard, nextPlayer, null),
+                currentPlayer = nextPlayer,
+                selectedPosition = null,
+                validMoves = emptyList(),
+                pendingMove = null,
+                isConfusedState = null,
+                isMultiJumpActive = false
+            )
+        }
+
         saveSession()
         checkWinCondition(newBoard)
         startTurnTimer()
@@ -484,58 +657,109 @@ class GameViewModel(
 
     private fun checkAiTurn() {
         val state = _uiState.value
-        // Only run AI if BLUE is the current player AND we are in VS AI mode
-        if (state.isVsAi && state.winner == null && !state.isTie && state.currentPlayer == PlayerColor.BLUE) { 
+
+        if (
+            state.isVsAi &&
+            state.winner == null &&
+            !state.isTie &&
+            state.currentPlayer == PlayerColor.BLUE
+        ) {
             runAi()
         }
     }
 
     private fun runAi() {
-        aiJob?.cancel() 
+        aiJob?.cancel()
+
         aiJob = viewModelScope.launch {
-            _uiState.update { it.copy(isAiThinking = true) }
-            delay(1500)
-            
-            var state = _uiState.value
-            while (state.isVsAi && state.currentPlayer == PlayerColor.BLUE && state.winner == null && !state.isTie) {
-                val allMoves = mutableListOf<Pair<Position, Position>>()
-                if (state.isMultiJumpActive && state.selectedPosition != null) {
-                    getJumpMovesOnly(state.selectedPosition!!, state.board).forEach { to ->
-                        allMoves.add(state.selectedPosition!! to to)
-                    }
-                } else {
-                    for (r in 0..7) {
-                        for (c in 0..7) {
-                            val piece = state.board[r][c]
-                            if (piece?.color == PlayerColor.BLUE) {
-                                val from = Position(r, c)
-                                getValidMoves(from, state.board).forEach { to ->
-                                    allMoves.add(from to to)
+            try {
+                _uiState.update { it.copy(isAiThinking = true) }
+
+                delay(1500)
+
+                var state = _uiState.value
+
+                while (
+                    state.isVsAi &&
+                    state.currentPlayer == PlayerColor.BLUE &&
+                    state.winner == null &&
+                    !state.isTie
+                ) {
+                    val allMoves = mutableListOf<Pair<Position, Position>>()
+
+                    if (state.isMultiJumpActive && state.selectedPosition != null) {
+                        val from = state.selectedPosition
+
+                        if (from != null) {
+                            getJumpMovesOnly(from, state.board).forEach { to ->
+                                allMoves.add(from to to)
+                            }
+                        }
+                    } else {
+                        for (r in 0..7) {
+                            for (c in 0..7) {
+                                val piece = state.board[r][c]
+
+                                if (piece?.color == PlayerColor.BLUE) {
+                                    val from = Position(r, c)
+
+                                    getValidMoves(from, state.board).forEach { to ->
+                                        allMoves.add(from to to)
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                if (allMoves.isEmpty()) {
-                    if (!state.isMultiJumpActive) {
-                        _uiState.update { it.copy(winner = PlayerColor.RED, isAiThinking = false) }
-                        viewModelScope.launch { repository.clearSession() }
+                    if (allMoves.isEmpty()) {
+                        if (!state.isMultiJumpActive) {
+                            _uiState.update {
+                                it.copy(
+                                    winner = PlayerColor.RED,
+                                    isAiThinking = false
+                                )
+                            }
+
+                            safeLaunch {
+                                repository.clearSession()
+                            }
+                        }
+
+                        break
                     }
-                    break
+
+                    val jumps = allMoves.filter {
+                        abs(it.first.row - it.second.row) == 2
+                    }
+
+                    val selectedMove = when {
+                        jumps.isNotEmpty() -> jumps.randomOrNull()
+                        else -> allMoves.randomOrNull()
+                    }
+
+                    if (selectedMove == null) {
+                        println("AI STOPPED: selectedMove was null")
+                        break
+                    }
+
+                    _uiState.update {
+                        it.copy(pendingMove = selectedMove)
+                    }
+
+                    executeMove()
+
+                    state = _uiState.value
+
+                    if (state.isMultiJumpActive) {
+                        delay(1000)
+                    }
                 }
-
-                val jumps = allMoves.filter { abs(it.first.row - it.second.row) == 2 }
-                val selectedMove = if (jumps.isNotEmpty()) jumps.random() else allMoves.random()
-
-                _uiState.update { it.copy(pendingMove = selectedMove) }
-                
-                // AI executes the move automatically
-                executeMove()
-                state = _uiState.value // Re-sync state for loop condition
-                if (state.isMultiJumpActive) delay(1000) 
+            } catch (e: Exception) {
+                println("AI CRASH CAUGHT: $e")
+                e.printStackTrace()
+            } finally {
+                _uiState.update { it.copy(isAiThinking = false) }
             }
-            _uiState.update { it.copy(isAiThinking = false) }
         }
     }
 
@@ -546,10 +770,16 @@ class GameViewModel(
 
         if (redCount == 0) {
             _uiState.update { it.copy(winner = PlayerColor.BLUE) }
-            viewModelScope.launch { repository.clearSession() }
+
+            safeLaunch {
+                repository.clearSession()
+            }
         } else if (blueCount == 0) {
             _uiState.update { it.copy(winner = PlayerColor.RED) }
-            viewModelScope.launch { repository.clearSession() }
+
+            safeLaunch {
+                repository.clearSession()
+            }
         }
     }
 }

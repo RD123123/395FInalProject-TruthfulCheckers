@@ -16,7 +16,7 @@ class SoundManager(private val player: AudioPlayer) {
 
     fun startBackgroundMusic() {
         if (isMusicEnabled) {
-            player.playMusic("background_music.mp3")
+            player.playMusic("background_music.wav")
         }
     }
 
@@ -26,20 +26,20 @@ class SoundManager(private val player: AudioPlayer) {
 
     fun playMoveSound() {
         if (isSoundEnabled) {
-            player.playSound("click.mp3")
+            player.playSound("click.wav")
         }
     }
 
     fun playCaptureSound() {
         if (isSoundEnabled) {
-            player.playSound("clack.mp3")
+            player.playSound("clack.wav")
         }
     }
 
     fun playWrongAnswerSound() {
         if (isSoundEnabled) {
             // Using clack as a fallback if a specific 'wrong' sound isn't provided
-            player.playSound("clack.mp3")
+            player.playSound("clack.wav")
         }
     }
 

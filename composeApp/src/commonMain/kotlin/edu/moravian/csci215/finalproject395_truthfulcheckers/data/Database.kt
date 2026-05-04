@@ -3,7 +3,6 @@ package edu.moravian.csci215.finalproject395_truthfulcheckers.data
 import androidx.room.*
 import edu.moravian.csci215.finalproject395_truthfulcheckers.models.GameSession
 import edu.moravian.csci215.finalproject395_truthfulcheckers.models.GameStats
-import edu.moravian.csci215.finalproject395_truthfulcheckers.models.PlayerColor
 import edu.moravian.csci215.finalproject395_truthfulcheckers.models.TriviaQuestion
 import kotlinx.coroutines.flow.Flow
 
@@ -12,17 +11,17 @@ interface TriviaDao {
     @Query("SELECT * FROM trivia_questions")
     fun getAllQuestions(): Flow<List<TriviaQuestion>>
 
-    @Query("SELECT * FROM trivia_questions WHERE categoryId = :catId AND isUsed = 0")
-    suspend fun getUnusedQuestionsByCategory(catId: Int): List<TriviaQuestion>
+    @Query("SELECT COUNT(*) FROM trivia_questions WHERE categoryId = :categoryId AND isUsed = 0")
+    suspend fun getUnusedCountByCategory(categoryId: Int): Int
 
-    @Query("SELECT COUNT(*) FROM trivia_questions WHERE categoryId = :catId AND isUsed = 0")
-    suspend fun getUnusedCountByCategory(catId: Int): Int
+    @Query("SELECT * FROM trivia_questions WHERE categoryId = :categoryId AND isUsed = 0")
+    suspend fun getUnusedQuestionsByCategory(categoryId: Int): List<TriviaQuestion>
+
+    @Query("UPDATE trivia_questions SET isUsed = 1 WHERE id = :id")
+    suspend fun markAsUsed(id: Int)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertQuestions(questions: List<TriviaQuestion>)
-
-    @Query("UPDATE trivia_questions SET isUsed = 1 WHERE id = :questionId")
-    suspend fun markAsUsed(questionId: Int)
 
     @Query("DELETE FROM trivia_questions")
     suspend fun deleteAll()
@@ -49,16 +48,10 @@ interface GameSessionDao {
     suspend fun clearSession()
 }
 
-class Converters {
-    @TypeConverter
-    fun fromPlayerColor(value: PlayerColor): String = value.name
-
-    @TypeConverter
-    fun toPlayerColor(value: String): PlayerColor = PlayerColor.valueOf(value)
-}
-
-@Database(entities = [TriviaQuestion::class, GameStats::class, GameSession::class], version = 2)
-@TypeConverters(Converters::class)
+@Database(
+    entities = [TriviaQuestion::class, GameStats::class, GameSession::class],
+    version = 9 // Bumped version to ensure schema reset
+)
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun triviaDao(): TriviaDao
