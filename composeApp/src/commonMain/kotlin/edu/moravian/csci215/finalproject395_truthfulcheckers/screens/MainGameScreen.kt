@@ -1,17 +1,53 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -22,7 +58,11 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import edu.moravian.csci215.finalproject395_truthfulcheckers.models.*
+import edu.moravian.csci215.finalproject395_truthfulcheckers.models.Emotion
+import edu.moravian.csci215.finalproject395_truthfulcheckers.models.Piece
+import edu.moravian.csci215.finalproject395_truthfulcheckers.models.PlayerColor
+import edu.moravian.csci215.finalproject395_truthfulcheckers.models.Position
+import edu.moravian.csci215.finalproject395_truthfulcheckers.models.TriviaQuestion
 import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.AppStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
@@ -30,8 +70,18 @@ import org.jetbrains.compose.resources.imageResource
 import truthfulcheckers.composeapp.generated.resources.Res
 import truthfulcheckers.composeapp.generated.resources.spritesheet
 
+/**
+ * The primary screen where the Checkers match is played. Handles the display
+ * of the board, player turns, and trivia overlays based on the device orientation.
+ *
+ * @param viewModel The view model managing the core game state and logic.
+ * @param onGameEnd Callback triggered when the game is won or ends in a tie.
+ */
 @Composable
-fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
+fun MainGameScreen(
+    viewModel: GameViewModel,
+    onGameEnd: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsState()
     val strings = getStrings(state.selectedLanguage)
 
@@ -43,7 +93,7 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val isLandscape = maxWidth > maxHeight
-        
+
         if (state.isCoinFlipping || state.firstPlayerMessage != null) {
             CoinFlipOverlay(state.isCoinFlipping, state.firstPlayerMessage, strings)
         } else {
@@ -52,82 +102,15 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
                     currentPlayer = state.currentPlayer,
                     player1Name = state.player1Name,
                     player2Name = state.player2Name,
-                    remainingTime = state.remainingTime, 
+                    remainingTime = state.remainingTime,
                     onForfeit = { viewModel.forfeit() },
-                    strings = strings
+                    strings = strings,
                 )
 
                 if (isLandscape) {
-                    Row(
-                        modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        PlayerInfoVertical(
-                            name = state.player2Name,
-                            color = Color.Blue,
-                            isCurrentTurn = state.currentPlayer == PlayerColor.BLUE,
-                            strings = strings,
-                            modifier = Modifier.width(120.dp)
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .aspectRatio(1f)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Board(
-                                board = state.board,
-                                selectedPosition = state.selectedPosition,
-                                validMoves = state.validMoves,
-                                boardStyle = state.selectedBoardStyle,
-                                onCellClick = { viewModel.onCellClick(it) }
-                            )
-                        }
-
-                        PlayerInfoVertical(
-                            name = state.player1Name,
-                            color = Color.Red,
-                            isCurrentTurn = state.currentPlayer == PlayerColor.RED,
-                            strings = strings,
-                            modifier = Modifier.width(120.dp)
-                        )
-                    }
+                    LandscapeBoardLayout(viewModel, strings, Modifier.weight(1f))
                 } else {
-                    Column(
-                        modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        PlayerInfoHorizontal(
-                            name = state.player2Name,
-                            color = Color.Blue,
-                            isCurrentTurn = state.currentPlayer == PlayerColor.BLUE,
-                            strings = strings
-                        )
-                        
-                        Spacer(Modifier.weight(1f))
-
-                        Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
-                            Board(
-                                board = state.board,
-                                selectedPosition = state.selectedPosition,
-                                validMoves = state.validMoves,
-                                boardStyle = state.selectedBoardStyle,
-                                onCellClick = { viewModel.onCellClick(it) }
-                            )
-                        }
-
-                        Spacer(Modifier.weight(1f))
-
-                        PlayerInfoHorizontal(
-                            name = state.player1Name,
-                            color = Color.Red,
-                            isCurrentTurn = state.currentPlayer == PlayerColor.RED,
-                            strings = strings
-                        )
-                    }
+                    PortraitBoardLayout(viewModel, strings, Modifier.weight(1f))
                 }
             }
         }
@@ -139,25 +122,125 @@ fun MainGameScreen(viewModel: GameViewModel, onGameEnd: () -> Unit) {
                 onAnswer = { viewModel.onAnswerQuestion(it) },
                 onCancel = { viewModel.cancelMove() },
                 isLandscape = isLandscape,
-                strings = strings
+                strings = strings,
             )
         }
     }
 }
 
+/**
+ * Helper composable to arrange the game board and player info horizontally for landscape mode.
+ */
 @Composable
-fun PlayerInfoVertical(name: String, color: Color, isCurrentTurn: Boolean, strings: AppStrings, modifier: Modifier = Modifier) {
+private fun LandscapeBoardLayout(
+    viewModel: GameViewModel,
+    strings: AppStrings,
+    modifier: Modifier = Modifier,
+) {
+    // Collecting state inside the helper fixes the 'GameState' unresolved reference!
+    val state by viewModel.uiState.collectAsState()
+
+    Row(
+        modifier = modifier.fillMaxWidth().padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        PlayerInfoVertical(
+            name = state.player2Name,
+            isCurrentTurn = state.currentPlayer == PlayerColor.BLUE,
+            strings = strings,
+            modifier = Modifier.width(120.dp),
+        )
+
+        Box(
+            modifier = Modifier.fillMaxHeight().aspectRatio(1f).padding(4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Board(
+                board = state.board,
+                selectedPosition = state.selectedPosition,
+                validMoves = state.validMoves,
+                boardStyle = state.selectedBoardStyle,
+                onCellClick = { viewModel.onCellClick(it) },
+            )
+        }
+
+        PlayerInfoVertical(
+            name = state.player1Name,
+            isCurrentTurn = state.currentPlayer == PlayerColor.RED,
+            strings = strings,
+            modifier = Modifier.width(120.dp),
+        )
+    }
+}
+
+/**
+ * Helper composable to arrange the game board and player info vertically for portrait mode.
+ */
+@Composable
+private fun PortraitBoardLayout(
+    viewModel: GameViewModel,
+    strings: AppStrings,
+    modifier: Modifier = Modifier,
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    Column(
+        modifier = modifier.fillMaxWidth().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        PlayerInfoHorizontal(
+            name = state.player2Name,
+            color = Color.Blue,
+            isCurrentTurn = state.currentPlayer == PlayerColor.BLUE,
+            strings = strings,
+        )
+
+        Spacer(Modifier.weight(1f))
+
+        Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+            Board(
+                board = state.board,
+                selectedPosition = state.selectedPosition,
+                validMoves = state.validMoves,
+                boardStyle = state.selectedBoardStyle,
+                onCellClick = { viewModel.onCellClick(it) },
+            )
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        PlayerInfoHorizontal(
+            name = state.player1Name,
+            color = Color.Red,
+            isCurrentTurn = state.currentPlayer == PlayerColor.RED,
+            strings = strings,
+        )
+    }
+}
+
+/**
+ * Displays vertical player information card (name and turn status), used primarily in landscape mode.
+ */
+@Composable
+fun PlayerInfoVertical(
+    name: String,
+    isCurrentTurn: Boolean,
+    strings: AppStrings,
+    modifier: Modifier = Modifier,
+) {
     Card(
         modifier = modifier.padding(4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrentTurn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isCurrentTurn) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = if (isCurrentTurn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (isCurrentTurn) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
     ) {
         Column(
             modifier = Modifier.padding(12.dp).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Text(text = name, style = MaterialTheme.typography.titleMedium, maxLines = 2, textAlign = TextAlign.Center)
             if (isCurrentTurn) {
@@ -168,19 +251,28 @@ fun PlayerInfoVertical(name: String, color: Color, isCurrentTurn: Boolean, strin
     }
 }
 
+/**
+ * Displays horizontal player information card (name and turn status), used primarily in portrait mode.
+ */
 @Composable
-fun PlayerInfoHorizontal(name: String, color: Color, isCurrentTurn: Boolean, strings: AppStrings) {
+fun PlayerInfoHorizontal(
+    name: String,
+    color: Color,
+    isCurrentTurn: Boolean,
+    strings: AppStrings,
+) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrentTurn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isCurrentTurn) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        colors =
+            CardDefaults.cardColors(
+                containerColor = if (isCurrentTurn) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (isCurrentTurn) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(text = name, style = MaterialTheme.typography.titleLarge)
             if (isCurrentTurn) {
@@ -190,79 +282,104 @@ fun PlayerInfoHorizontal(name: String, color: Color, isCurrentTurn: Boolean, str
     }
 }
 
+/**
+ * A top bar displaying the current player's turn, match time (if applicable), and a forfeit button.
+ */
 @Composable
-fun TurnInfoBar(currentPlayer: PlayerColor, player1Name: String, player2Name: String, remainingTime: Int?, onForfeit: () -> Unit, strings: AppStrings) {
+fun TurnInfoBar(
+    currentPlayer: PlayerColor,
+    player1Name: String,
+    player2Name: String,
+    remainingTime: Int?,
+    onForfeit: () -> Unit,
+    strings: AppStrings,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth().height(60.dp),
         color = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
-        shadowElevation = 4.dp
+        shadowElevation = 4.dp,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp).fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (currentPlayer == PlayerColor.RED) player1Name else player2Name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 if (remainingTime != null) {
                     Text(
                         text = "${remainingTime}s",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (remainingTime <= 5) Color.Yellow else MaterialTheme.colorScheme.onPrimary,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
-            
+
             Button(
                 onClick = onForfeit,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC62828),
-                    contentColor = Color.White
-                ),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFC62828),
+                        contentColor = Color.White,
+                    ),
                 shape = RoundedCornerShape(4.dp),
-                modifier = Modifier
-                    .height(44.dp)
-                    .widthIn(min = 120.dp),
+                modifier =
+                    Modifier
+                        .height(44.dp)
+                        .widthIn(min = 120.dp),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f))
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.6f)),
             ) {
                 Text(
                     text = strings.forfeit.uppercase(),
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.Black,
-                        fontSize = 14.sp
-                    ),
-                    textAlign = TextAlign.Center
+                    style =
+                        MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 14.sp,
+                        ),
+                    textAlign = TextAlign.Center,
                 )
             }
         }
     }
 }
 
+/**
+ * Draws the 8x8 checkerboard grid and renders pieces on their corresponding tiles.
+ * Handles styling for high-contrast and modern themes.
+ *
+ * @param board 2D List representing the board matrix and piece locations.
+ * @param selectedPosition Highlights the tile a player has tapped.
+ * @param validMoves Highlights tiles a selected piece can legally move to.
+ * @param boardStyle The string key determining the visual color theme of the tiles.
+ * @param onCellClick Callback returning the coordinates of a tapped tile.
+ */
 @Composable
 fun Board(
     board: List<List<Piece?>>,
     selectedPosition: Position?,
     validMoves: List<Position>,
     boardStyle: String,
-    onCellClick: (Position) -> Unit
+    onCellClick: (Position) -> Unit,
 ) {
-    val darkTileColor = when (boardStyle) {
-        "Modern" -> Color(0xFF37474F)
-        "High Contrast" -> Color.Black
-        else -> Color(0xFF4E342E)
-    }
-    val lightTileColor = when (boardStyle) {
-        "Modern" -> Color(0xFFCFD8DC)
-        "High Contrast" -> Color.White
-        else -> Color(0xFFD7CCC8)
-    }
+    val darkTileColor =
+        when (boardStyle) {
+            "Modern" -> Color(0xFF37474F)
+            "High Contrast" -> Color.Black
+            else -> Color(0xFF4E342E)
+        }
+    val lightTileColor =
+        when (boardStyle) {
+            "Modern" -> Color(0xFFCFD8DC)
+            "High Contrast" -> Color.White
+            else -> Color(0xFFD7CCC8)
+        }
 
     Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         for (row in 0..7) {
@@ -272,25 +389,27 @@ fun Board(
                     val piece = board[row][col]
                     val isSelected = selectedPosition == position
                     val isValidTarget = validMoves.contains(position)
-                    
+
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .background(if ((row + col) % 2 != 0) darkTileColor else lightTileColor)
-                            .border(if (isSelected) 4.dp else 0.dp, Color.Yellow)
-                            .clickable { onCellClick(position) },
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(if ((row + col) % 2 != 0) darkTileColor else lightTileColor)
+                                .border(if (isSelected) 4.dp else 0.dp, Color.Yellow)
+                                .clickable { onCellClick(position) },
+                        contentAlignment = Alignment.Center,
                     ) {
                         if (isValidTarget) {
                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize(0.8f)
-                                    .background(Color.Yellow.copy(alpha = 0.4f), CircleShape)
+                                modifier =
+                                    Modifier
+                                        .fillMaxSize(0.8f)
+                                        .background(Color.Yellow.copy(alpha = 0.4f), CircleShape),
                             )
                         }
-                        
-                        piece?.let { 
+
+                        piece?.let {
                             CheckerPiece(it)
                         }
                     }
@@ -300,45 +419,59 @@ fun Board(
     }
 }
 
+/**
+ * Draws an individual checker piece by pulling the correct graphic from the sprite sheet
+ * based on the piece's assigned color and emotion state.
+ */
 @Composable
 fun CheckerPiece(piece: Piece) {
     val spriteBitmap = imageResource(Res.drawable.spritesheet)
-    
-    val spriteRow = when (piece.emotion) {
-        Emotion.HAPPY -> 0
-        Emotion.SCARED -> 1
-        Emotion.MAD -> 2
-        Emotion.CONFUSED -> 3
-    }
+
+    val spriteRow =
+        when (piece.emotion) {
+            Emotion.HAPPY -> 0
+            Emotion.SCARED -> 1
+            Emotion.MAD -> 2
+            Emotion.CONFUSED -> 3
+        }
     val spriteCol = if (piece.color == PlayerColor.RED) 0 else 1
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val spriteWidth = spriteBitmap.width / 3
             val spriteHeight = spriteBitmap.height / 4
-            
+
             drawImage(
                 image = spriteBitmap,
                 srcOffset = IntOffset(spriteCol * spriteWidth, spriteRow * spriteHeight),
                 srcSize = IntSize(spriteWidth, spriteHeight),
-                dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                dstSize = IntSize(size.width.toInt(), size.height.toInt()),
             )
         }
-        
+
         if (piece.king) {
             Text(
                 text = "👑",
                 fontSize = 24.sp,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-12).dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = (-12).dp),
             )
         }
     }
 }
 
+/**
+ * Displays an animated coin flip overlay at the start of a match to determine
+ * which player takes the first turn.
+ */
 @Composable
-fun CoinFlipOverlay(isFlipping: Boolean, message: String?, strings: AppStrings) {
+fun CoinFlipOverlay(
+    isFlipping: Boolean,
+    message: String?,
+    strings: AppStrings,
+) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.8f)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (isFlipping) {
@@ -354,41 +487,50 @@ fun CoinFlipOverlay(isFlipping: Boolean, message: String?, strings: AppStrings) 
     }
 }
 
+/**
+ * An interactive overlay that halts gameplay and requires a player to answer a
+ * True/False trivia question before completing their intended move.
+ */
 @Composable
 fun QuestionOverlay(
-    question: TriviaQuestion?, 
+    question: TriviaQuestion?,
     errorMessage: String?,
-    onAnswer: (Boolean) -> Unit, 
-    onCancel: () -> Unit, 
-    isLandscape: Boolean, 
-    strings: AppStrings
+    onAnswer: (Boolean) -> Unit,
+    onCancel: () -> Unit,
+    isLandscape: Boolean,
+    strings: AppStrings,
 ) {
     Box(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.85f)).clickable(enabled = false) {},
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(if (isLandscape) 0.6f else 0.9f).wrapContentHeight(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
         ) {
             Column(
-                modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState()), 
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(strings.triviaGate, style = MaterialTheme.typography.headlineMedium)
                     IconButton(onClick = onCancel) {
                         Icon(Icons.Default.Close, contentDescription = "Cancel Move", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
-                
+
                 if (errorMessage != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth().background(Color.Red.copy(alpha = 0.1f)).padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red)
                         Spacer(Modifier.width(8.dp))
@@ -399,21 +541,21 @@ fun QuestionOverlay(
 
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    text = question?.question ?: "Loading...", 
+                    text = question?.question ?: "Loading...",
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(Modifier.height(24.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     Button(
-                        onClick = { onAnswer(true) }, 
+                        onClick = { onAnswer(true) },
                         modifier = Modifier.weight(1f).height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50), contentColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50), contentColor = Color.White),
                     ) { Text(strings.trueText) }
                     Button(
-                        onClick = { onAnswer(false) }, 
+                        onClick = { onAnswer(false) },
                         modifier = Modifier.weight(1f).height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336), contentColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF44336), contentColor = Color.White),
                     ) { Text(strings.falseText) }
                 }
             }

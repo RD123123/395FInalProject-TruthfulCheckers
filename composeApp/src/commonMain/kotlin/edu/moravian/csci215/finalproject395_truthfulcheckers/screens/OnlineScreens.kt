@@ -20,30 +20,32 @@ import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.OnlineGam
 fun OnlineMenuScreen(
     selectedLanguage: String,
     onCreateRoom: () -> Unit,
-    onJoinRoom: () -> Unit
+    onJoinRoom: () -> Unit,
 ) {
     val strings = getStrings(selectedLanguage)
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = strings.onlineMultiplayer,
             style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
 
         Spacer(Modifier.height(32.dp))
 
         Button(
             onClick = onCreateRoom,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(56.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(56.dp),
         ) {
             Text(strings.createRoom)
         }
@@ -52,9 +54,10 @@ fun OnlineMenuScreen(
 
         OutlinedButton(
             onClick = onJoinRoom,
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(56.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(56.dp),
         ) {
             Text(strings.joinRoom)
         }
@@ -66,7 +69,7 @@ fun OnlineMenuScreen(
 fun CreateRoomScreen(
     gameViewModel: GameViewModel,
     onlineViewModel: OnlineGameViewModel,
-    onRoomCreated: (String) -> Unit
+    onRoomCreated: (String) -> Unit,
 ) {
     val gameState by gameViewModel.uiState.collectAsState()
     val onlineState by onlineViewModel.uiState.collectAsState()
@@ -83,16 +86,17 @@ fun CreateRoomScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = strings.createGame,
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
         )
 
         Spacer(Modifier.height(16.dp))
@@ -103,7 +107,7 @@ fun CreateRoomScreen(
             label = { Text(strings.yourName) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(16.dp))
@@ -111,15 +115,16 @@ fun CreateRoomScreen(
         Text(
             text = strings.category,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
 
         ExposedDropdownMenuBox(
             expanded = expandedCategory,
             onExpandedChange = { expandedCategory = !expandedCategory },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
         ) {
             OutlinedTextField(
                 value = gameState.selectedCategory?.name ?: "General Knowledge",
@@ -128,14 +133,15 @@ fun CreateRoomScreen(
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedCategory)
                 },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth()
+                modifier =
+                    Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
             )
 
             ExposedDropdownMenu(
                 expanded = expandedCategory,
-                onDismissRequest = { expandedCategory = false }
+                onDismissRequest = { expandedCategory = false },
             ) {
                 gameState.categories.forEach { category: TriviaCategory ->
                     DropdownMenuItem(
@@ -143,7 +149,7 @@ fun CreateRoomScreen(
                         onClick = {
                             gameViewModel.setCategory(category)
                             expandedCategory = false
-                        }
+                        },
                     )
                 }
             }
@@ -154,12 +160,13 @@ fun CreateRoomScreen(
         Text(
             text = strings.difficulty,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
 
         DifficultySelector(
             selected = difficulty,
-            onSelected = { difficulty = it }
+            onSelected = { difficulty = it },
+            strings = strings, // <-- Add this line!
         )
 
         Spacer(Modifier.height(24.dp))
@@ -169,13 +176,14 @@ fun CreateRoomScreen(
                 onlineViewModel.createRoom(
                     playerName = playerName,
                     category = gameState.selectedCategory,
-                    difficulty = difficulty
+                    difficulty = difficulty,
                 )
             },
             enabled = playerName.isNotBlank() && !onlineState.isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
         ) {
             if (onlineState.isLoading) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
@@ -188,7 +196,7 @@ fun CreateRoomScreen(
             Spacer(Modifier.height(8.dp))
             Text(
                 text = it,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }
@@ -198,7 +206,7 @@ fun CreateRoomScreen(
 fun JoinRoomScreen(
     selectedLanguage: String,
     viewModel: OnlineGameViewModel,
-    onRoomJoined: (String) -> Unit
+    onRoomJoined: (String) -> Unit,
 ) {
     val strings = getStrings(selectedLanguage)
     val state by viewModel.uiState.collectAsState()
@@ -213,15 +221,16 @@ fun JoinRoomScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = strings.joinGame,
-            style = MaterialTheme.typography.headlineMedium
+            style = MaterialTheme.typography.headlineMedium,
         )
 
         Spacer(Modifier.height(16.dp))
@@ -231,7 +240,7 @@ fun JoinRoomScreen(
             onValueChange = { if (!it.contains("\n")) playerName = it },
             label = { Text(strings.yourName) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(8.dp))
@@ -244,7 +253,7 @@ fun JoinRoomScreen(
             },
             label = { Text(strings.roomCode) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(24.dp))
@@ -252,9 +261,10 @@ fun JoinRoomScreen(
         Button(
             onClick = { viewModel.joinRoom(roomCode, playerName) },
             enabled = playerName.isNotBlank() && roomCode.length == 6 && !state.isLoading,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
@@ -267,7 +277,7 @@ fun JoinRoomScreen(
             Spacer(Modifier.height(8.dp))
             Text(
                 text = it,
-                color = MaterialTheme.colorScheme.error
+                color = MaterialTheme.colorScheme.error,
             )
         }
     }

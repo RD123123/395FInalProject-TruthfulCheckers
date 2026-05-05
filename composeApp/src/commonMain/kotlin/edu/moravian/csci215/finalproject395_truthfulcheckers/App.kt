@@ -41,6 +41,9 @@ import org.koin.compose.koinInject
 import truthfulcheckers.composeapp.generated.resources.Res
 import truthfulcheckers.composeapp.generated.resources.spritesheet
 
+/**
+ * Defines all valid navigation destinations within the application.
+ */
 enum class TruthfulCheckersScreen {
     Home,
     GameMode,
@@ -52,14 +55,19 @@ enum class TruthfulCheckersScreen {
     OnlineMenu,
     CreateRoom,
     JoinRoom,
-    OnlineGame
+    OnlineGame,
 }
 
+/**
+ * The root composable for the Truthful Checkers application.
+ * Manages the global navigation graph, theme application, and top-level UI components (like the App Bar).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
     val navController = rememberNavController()
 
+    // Inject singleton managers via Koin
     val viewModel: GameViewModel = koinInject()
     val onlineViewModel: OnlineGameViewModel = koinInject()
     val soundManager: SoundManager = koinInject()
@@ -71,6 +79,7 @@ fun App() {
 
     val strings = getStrings(uiState.selectedLanguage)
 
+    // Tracks the last screen visited before opening settings, ensuring correct back-navigation
     var lastNonSettingsRoute by remember {
         mutableStateOf(TruthfulCheckersScreen.Home.name)
     }
@@ -83,31 +92,35 @@ fun App() {
         }
     }
 
-    val currentScreen = try {
-        TruthfulCheckersScreen.valueOf(currentRoute)
-    } catch (e: Exception) {
-        TruthfulCheckersScreen.Home
-    }
+    val currentScreen =
+        try {
+            TruthfulCheckersScreen.valueOf(currentRoute)
+        } catch (e: Exception) {
+            TruthfulCheckersScreen.Home
+        }
 
-    val screenTitle = when (currentScreen) {
-        TruthfulCheckersScreen.Home -> strings.appName
-        TruthfulCheckersScreen.GameMode -> strings.selectMode
-        TruthfulCheckersScreen.Setup -> strings.gameSetup
-        TruthfulCheckersScreen.MainGame -> strings.appName
-        TruthfulCheckersScreen.Results -> strings.gameOver
-        TruthfulCheckersScreen.Instructions -> strings.howToPlay
-        TruthfulCheckersScreen.Settings -> strings.settings
-        TruthfulCheckersScreen.OnlineMenu -> strings.onlineMultiplayer
-        TruthfulCheckersScreen.CreateRoom -> strings.createRoom
-        TruthfulCheckersScreen.JoinRoom -> strings.joinRoom
-        TruthfulCheckersScreen.OnlineGame -> strings.onlineMultiplayer
-    }
+    // Dynamic Top App Bar title resolution
+    val screenTitle =
+        when (currentScreen) {
+            TruthfulCheckersScreen.Home -> strings.appName
+            TruthfulCheckersScreen.GameMode -> strings.selectMode
+            TruthfulCheckersScreen.Setup -> strings.gameSetup
+            TruthfulCheckersScreen.MainGame -> strings.appName
+            TruthfulCheckersScreen.Results -> strings.gameOver
+            TruthfulCheckersScreen.Instructions -> strings.howToPlay
+            TruthfulCheckersScreen.Settings -> strings.settings
+            TruthfulCheckersScreen.OnlineMenu -> strings.onlineMultiplayer
+            TruthfulCheckersScreen.CreateRoom -> strings.createRoom
+            TruthfulCheckersScreen.JoinRoom -> strings.joinRoom
+            TruthfulCheckersScreen.OnlineGame -> strings.onlineMultiplayer
+        }
 
+    // Lifecycle effect to manage background music based on the active screen
     LaunchedEffect(currentScreen) {
         val isGameRelated =
             currentScreen == TruthfulCheckersScreen.MainGame ||
-                    currentScreen == TruthfulCheckersScreen.Results ||
-                    currentScreen == TruthfulCheckersScreen.OnlineGame
+                currentScreen == TruthfulCheckersScreen.Results ||
+                currentScreen == TruthfulCheckersScreen.OnlineGame
 
         if (isGameRelated) {
             soundManager.startBackgroundMusic()
@@ -142,11 +155,11 @@ fun App() {
                                         } else {
                                             navController.popBackStack()
                                         }
-                                    }
+                                    },
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ArrowBack,
-                                        contentDescription = strings.back
+                                        contentDescription = strings.back,
                                     )
                                 }
                             }
@@ -158,30 +171,32 @@ fun App() {
                                         navController.navigate(TruthfulCheckersScreen.Settings.name) {
                                             launchSingleTop = true
                                         }
-                                    }
+                                    },
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Settings,
-                                        contentDescription = strings.settings
+                                        contentDescription = strings.settings,
                                     )
                                 }
                             }
                         },
-                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                            actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                        )
+                        colors =
+                            TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                                navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                                actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                            ),
                     )
-                }
+                },
             ) { innerPadding ->
                 NavHost(
                     navController = navController,
                     startDestination = TruthfulCheckersScreen.Home.name,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
                 ) {
                     composable(route = TruthfulCheckersScreen.Home.name) {
                         HomeScreen(
@@ -191,7 +206,7 @@ fun App() {
                                     navigateWithLoading(
                                         navController = navController,
                                         route = TruthfulCheckersScreen.GameMode.name,
-                                        viewModel = viewModel
+                                        viewModel = viewModel,
                                     )
                                 }
                             },
@@ -202,7 +217,7 @@ fun App() {
                                 navController.navigate(TruthfulCheckersScreen.Settings.name) {
                                     launchSingleTop = true
                                 }
-                            }
+                            },
                         )
                     }
 
@@ -223,13 +238,13 @@ fun App() {
                                     navigateWithLoading(
                                         navController = navController,
                                         route = TruthfulCheckersScreen.Setup.name,
-                                        viewModel = viewModel
+                                        viewModel = viewModel,
                                     )
                                 }
                             },
                             onOnlineSelected = {
                                 navController.navigate(TruthfulCheckersScreen.OnlineMenu.name)
-                            }
+                            },
                         )
                     }
 
@@ -241,7 +256,7 @@ fun App() {
                             },
                             onJoinRoom = {
                                 navController.navigate(TruthfulCheckersScreen.JoinRoom.name)
-                            }
+                            },
                         )
                     }
 
@@ -256,7 +271,7 @@ fun App() {
                                     }
                                     launchSingleTop = true
                                 }
-                            }
+                            },
                         )
                     }
 
@@ -271,7 +286,7 @@ fun App() {
                                     }
                                     launchSingleTop = true
                                 }
-                            }
+                            },
                         )
                     }
 
@@ -292,7 +307,7 @@ fun App() {
                                     }
                                     launchSingleTop = true
                                 }
-                            }
+                            },
                         )
                     }
 
@@ -308,10 +323,10 @@ fun App() {
                                     navigateWithLoading(
                                         navController = navController,
                                         route = TruthfulCheckersScreen.MainGame.name,
-                                        viewModel = viewModel
+                                        viewModel = viewModel,
                                     )
                                 }
-                            }
+                            },
                         )
                     }
 
@@ -322,7 +337,7 @@ fun App() {
                                 navController.navigate(TruthfulCheckersScreen.Results.name) {
                                     launchSingleTop = true
                                 }
-                            }
+                            },
                         )
                     }
 
@@ -381,12 +396,13 @@ fun App() {
                                     }
                                     launchSingleTop = true
                                 }
-                            }
+                            },
                         )
                     }
                 }
             }
 
+            // Global blocking overlay for network or setup delays
             if (uiState.isLoading) {
                 LoadingOverlay()
             }
@@ -394,10 +410,14 @@ fun App() {
     }
 }
 
+/**
+ * Helper function to inject an artificial delay during navigation.
+ * Enhances UX by preventing abrupt, jarring transitions when rendering heavy screens.
+ */
 suspend fun navigateWithLoading(
     navController: NavController,
     route: String,
-    viewModel: GameViewModel
+    viewModel: GameViewModel,
 ) {
     viewModel.setLoading(true)
     delay(800)
@@ -405,6 +425,10 @@ suspend fun navigateWithLoading(
     viewModel.setLoading(false)
 }
 
+/**
+ * A global blocking overlay that displays a spinning animation while
+ * the user is prevented from interacting with the app during background operations.
+ */
 @Composable
 fun LoadingOverlay() {
     val spriteBitmap = imageResource(Res.drawable.spritesheet)
@@ -413,28 +437,32 @@ fun LoadingOverlay() {
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        )
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(1000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.7f))
-            .clickable(enabled = false) {},
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable(enabled = false) {},
+        // Intercepts taps
+        contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.size(120.dp).rotate(rotation)) {
             val spriteWidth = spriteBitmap.width / 3
             val spriteHeight = spriteBitmap.height / 4
 
+            // Renders the 'Mad' state from the sprite sheet as the loading indicator
             drawImage(
                 image = spriteBitmap,
                 srcOffset = IntOffset(2 * spriteWidth, 0),
                 srcSize = IntSize(spriteWidth, spriteHeight),
-                dstSize = IntSize(size.width.toInt(), size.height.toInt())
+                dstSize = IntSize(size.width.toInt(), size.height.toInt()),
             )
         }
     }

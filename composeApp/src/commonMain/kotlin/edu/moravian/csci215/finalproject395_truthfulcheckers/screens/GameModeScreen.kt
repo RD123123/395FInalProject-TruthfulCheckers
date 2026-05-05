@@ -13,11 +13,19 @@ import androidx.compose.ui.unit.dp
 import edu.moravian.csci215.finalproject395_truthfulcheckers.theme.getStrings
 import edu.moravian.csci215.finalproject395_truthfulcheckers.viewmodel.GameViewModel
 
+/**
+ * Allows the user to select their desired game mode before proceeding to setup.
+ * Supports navigating to Single Player (vs AI), Local Multiplayer, or Online Multiplayer.
+ *
+ * @param viewModel The shared view model managing the app state and language.
+ * @param onModeSelected Callback triggered for local modes. Passes 'true' if Vs AI, 'false' if Local Multiplayer.
+ * @param onOnlineSelected Callback triggered to navigate to the online matchmaking lobby.
+ */
 @Composable
 fun GameModeScreen(
     viewModel: GameViewModel,
     onModeSelected: (Boolean) -> Unit,
-    onOnlineSelected: () -> Unit
+    onOnlineSelected: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsState()
     val strings = getStrings(state.selectedLanguage)
@@ -28,12 +36,12 @@ fun GameModeScreen(
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = strings.selectMode,
                 style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
             )
 
             Spacer(Modifier.height(if (isLandscape) 24.dp else 48.dp))
@@ -41,34 +49,46 @@ fun GameModeScreen(
             if (isLandscape) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     ModeButton(strings.vsAi, { onModeSelected(true) }, Modifier.weight(1f))
                     Spacer(Modifier.width(16.dp))
                     ModeButton(strings.localMulti, { onModeSelected(false) }, Modifier.weight(1f))
                     Spacer(Modifier.width(16.dp))
-                    ModeButton("Online Play", onOnlineSelected, Modifier.weight(1f))
+                    ModeButton(strings.onlineMultiplayer, onOnlineSelected, Modifier.weight(1f))
                 }
             } else {
                 ModeButton(strings.vsAi, { onModeSelected(true) }, Modifier.fillMaxWidth(0.7f))
                 Spacer(Modifier.height(16.dp))
                 ModeButton(strings.localMulti, { onModeSelected(false) }, Modifier.fillMaxWidth(0.7f))
                 Spacer(Modifier.height(16.dp))
-                ModeButton("Online Play", onOnlineSelected, Modifier.fillMaxWidth(0.7f))
+                ModeButton(strings.onlineMultiplayer, onOnlineSelected, Modifier.fillMaxWidth(0.7f))
             }
         }
     }
 }
 
+/**
+ * A standardized, stylized button used specifically for selecting game modes.
+ *
+ * @param text The localized text to display on the button.
+ * @param onClick The action to perform when tapped.
+ * @param modifier The layout modifier to apply.
+ */
 @Composable
-fun ModeButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ModeButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Button(
         onClick = onClick,
         modifier = modifier.height(56.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary
-        )
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ),
     ) {
         Text(text)
     }

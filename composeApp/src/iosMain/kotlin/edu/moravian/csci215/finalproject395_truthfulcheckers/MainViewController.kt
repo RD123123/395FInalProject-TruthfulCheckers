@@ -1,22 +1,28 @@
 package edu.moravian.csci215.finalproject395_truthfulcheckers
 
 import androidx.compose.ui.window.ComposeUIViewController
-import org.koin.core.context.startKoin
+import edu.moravian.csci215.finalproject395_truthfulcheckers.di.commonModule
 import edu.moravian.csci215.finalproject395_truthfulcheckers.di.platformModule
-import edu.moravian.csci215.finalproject395_truthfulcheckers.di.commonModule // <--- Import the common module
+import org.koin.core.context.startKoin
+import platform.UIKit.UIViewController // <-- This explicitly tells Kotlin how to talk to iOS
 
-// A safety flag so Koin only starts once
 private var isKoinStarted = false
 
-fun MainViewController() = ComposeUIViewController {
+/**
+ * The main entry point for the iOS application.
+ * This function is called directly from the Swift AppDelegate to launch the Compose UI.
+ */
+@Suppress("FunctionName", "unused") // Silences Kotlin's linting rules so iOS can read this properly
+fun MainViewController(): UIViewController = ComposeUIViewController {
+
+    // Safely boot up Koin for Dependency Injection
     if (!isKoinStarted) {
         startKoin {
-            // Load BOTH modules so the GameViewModel is available!
             modules(commonModule(), platformModule())
         }
         isKoinStarted = true
     }
 
-    // Now that Koin is fully running, it is safe to load the UI
+    // Launch the shared Compose UI
     App()
 }

@@ -15,6 +15,37 @@ import kotlinx.serialization.json.Json
 import kotlin.math.abs
 import kotlin.random.Random
 
+/**
+ * Represents the entire UI state for the Checkers game.
+ * * @property board The current 8x8 grid of pieces.
+ * @property currentPlayer The color of the player whose turn it is.
+ * @property selectedPosition The coordinates of the currently tapped piece.
+ * @property validMoves A list of positions the selected piece can legally move to.
+ * @property currentQuestion The trivia question currently being presented to the player.
+ * @property showQuestion Whether the trivia overlay should be visible.
+ * @property winner The color of the winning player, or null if game is ongoing.
+ * @property isTie True if the game has ended in a draw (e.g., 40-move rule).
+ * @property pendingMove The (from, to) coordinates of a move awaiting trivia verification.
+ * @property isConfusedState The player color currently affected by a "Confused" emotion.
+ * @property isAiThinking True if the AI is currently calculating a move.
+ * @property isVsAi True if the current game mode is Single Player.
+ * @property difficulty The difficulty level of the AI (Easy, Medium, Hard).
+ * @property isLoading True if a network request is pending.
+ * @property isCoinFlipping True if the start-of-game animation is active.
+ * @property firstPlayerMessage Localized message declaring who goes first.
+ * @property selectedTheme The visual theme of the app (e.g., Warm Tan).
+ * @property selectedBoardStyle The visual style of the checkers tiles.
+ * @property turnTimerSetting The user's preference for countdown length (Off, 10s, etc.).
+ * @property remainingTime The actual seconds left on the current turn's clock.
+ * @property isMultiJumpActive True if a player has captured and can jump again.
+ * @property player1Name The custom name for the Red player.
+ * @property player2Name The custom name for the Blue player/AI.
+ * @property drawCounter Increments on non-capture moves to detect stalemates.
+ * @property selectedLanguage The currently selected language for localization.
+ * @property categories The list of trivia categories fetched from the API.
+ * @property selectedCategory The currently active trivia category.
+ * @property errorMessage The current error string to display in the UI.
+ */
 data class GameUiState(
     val board: List<List<Piece?>> = List(8) { List(8) { null } },
     val currentPlayer: PlayerColor = PlayerColor.RED,
@@ -43,14 +74,17 @@ data class GameUiState(
     val selectedLanguage: String = "English",
     val categories: List<TriviaCategory> = emptyList(),
     val selectedCategory: TriviaCategory? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 )
 
+/**
+ * The central ViewModel for the Truthful Checkers game logic.
+ * Manages game state, AI decision making, turn timers, and trivia integration.
+ */
 class GameViewModel(
     private val repository: GameRepository,
-    private val soundManager: SoundManager
+    private val soundManager: SoundManager,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
@@ -61,6 +95,9 @@ class GameViewModel(
         loadCategories()
     }
 
+    /**
+     * Helper to launch coroutines with centralized error handling to avoid silent crashes.
+     */
     private fun safeLaunch(block: suspend () -> Unit) {
         viewModelScope.launch {
             try {
@@ -72,6 +109,9 @@ class GameViewModel(
         }
     }
 
+    /**
+     * Fetches trivia categories from the Ktor repository and updates the UI state.
+     */
     private fun loadCategories() {
         safeLaunch {
             val cats = repository.getCategories()
@@ -83,52 +123,69 @@ class GameViewModel(
         }
     }
 
+    /** Sets the game mode to either Player vs AI or Local Multiplayer. */
     fun setVsAi(vsAi: Boolean) {
+        val strings = getStrings(_uiState.value.selectedLanguage)
         _uiState.update {
             it.copy(
                 isVsAi = vsAi,
-                player2Name = if (vsAi) "AI Bot" else "Player 2"
+                player2Name = if (vsAi) strings.aiBotDefault else strings.player2Name,
             )
         }
     }
 
+    /** Updates the selected trivia category. */
     fun setCategory(category: TriviaCategory) {
         _uiState.update { it.copy(selectedCategory = category) }
     }
 
+    /** Updates the application localization language. */
     fun setLanguage(lang: String) {
         _uiState.update { it.copy(selectedLanguage = lang) }
     }
 
-    fun setPlayerNames(p1: String, p2: String) {
+    /** Sets the custom display names for the players. */
+    fun setPlayerNames(
+        p1: String,
+        p2: String,
+    ) {
+        val strings = getStrings(_uiState.value.selectedLanguage)
         _uiState.update {
             it.copy(
-                player1Name = p1.ifBlank { "Player 1" },
-                player2Name = p2.ifBlank { if (it.isVsAi) "AI Bot" else "Player 2" }
+                player1Name = p1.ifBlank { strings.player1Name },
+                player2Name = p2.ifBlank { if (it.isVsAi) strings.aiBotDefault else strings.player2Name },
             )
         }
     }
 
+    /** Sets the UI color theme. */
     fun setTheme(theme: String) {
         _uiState.update { it.copy(selectedTheme = theme) }
     }
 
+    /** Sets the visual style of the checkers board. */
     fun setBoardStyle(style: String) {
         _uiState.update { it.copy(selectedBoardStyle = style) }
     }
 
+    /** Sets the duration for the optional turn timer. */
     fun setTurnTimer(timer: String) {
         _uiState.update { it.copy(turnTimerSetting = timer) }
     }
 
+    /** Sets the difficulty level of the AI opponent. */
     fun setDifficulty(diff: String) {
         _uiState.update { it.copy(difficulty = diff) }
     }
 
+    /** Sets the global loading state. */
     fun setLoading(loading: Boolean) {
         _uiState.update { it.copy(isLoading = loading) }
     }
 
+    /**
+     * Resets the match, generates the initial board, and initiates the coin flip sequence.
+     */
     fun resetGame() {
         stopTimer()
         aiJob?.cancel()
@@ -136,15 +193,16 @@ class GameViewModel(
         safeLaunch {
             val strings = getStrings(_uiState.value.selectedLanguage)
 
-            val initialBoard = List(8) { row ->
-                List(8) { col ->
-                    when {
-                        (row + col) % 2 != 0 && row < 3 -> Piece(PlayerColor.BLUE)
-                        (row + col) % 2 != 0 && row > 4 -> Piece(PlayerColor.RED)
-                        else -> null
+            val initialBoard =
+                List(8) { row ->
+                    List(8) { col ->
+                        when {
+                            (row + col) % 2 != 0 && row < 3 -> Piece(PlayerColor.BLUE)
+                            (row + col) % 2 != 0 && row > 4 -> Piece(PlayerColor.RED)
+                            else -> null
+                        }
                     }
                 }
-            }
 
             soundManager.startBackgroundMusic()
 
@@ -164,7 +222,7 @@ class GameViewModel(
                     showQuestion = false,
                     board = initialBoard,
                     drawCounter = 0,
-                    errorMessage = null
+                    errorMessage = null,
                 )
             }
 
@@ -172,15 +230,18 @@ class GameViewModel(
 
             val goesFirst = if (Random.nextBoolean()) PlayerColor.RED else PlayerColor.BLUE
             val winnerName =
-                if (goesFirst == PlayerColor.RED) _uiState.value.player1Name
-                else _uiState.value.player2Name
+                if (goesFirst == PlayerColor.RED) {
+                    _uiState.value.player1Name
+                } else {
+                    _uiState.value.player2Name
+                }
 
             _uiState.update {
                 it.copy(
                     board = calculateEmotions(initialBoard, goesFirst, null),
                     currentPlayer = goesFirst,
                     firstPlayerMessage = "$winnerName ${strings.winsFlip}",
-                    isCoinFlipping = false
+                    isCoinFlipping = false,
                 )
             }
 
@@ -195,24 +256,31 @@ class GameViewModel(
         }
     }
 
+    /**
+     * Saves the current board state and match config to the local Room database.
+     */
     private fun saveSession() {
         val state = _uiState.value
 
         safeLaunch {
-            val session = GameSession(
-                player1Name = state.player1Name,
-                player2Name = state.player2Name,
-                currentPlayer = state.currentPlayer,
-                selectedCategoryName = state.selectedCategory?.name ?: "General",
-                selectedCategoryId = state.selectedCategory?.id ?: 9,
-                isVsAi = state.isVsAi,
-                boardData = Json.encodeToString(state.board)
-            )
+            val session =
+                GameSession(
+                    player1Name = state.player1Name,
+                    player2Name = state.player2Name,
+                    currentPlayer = state.currentPlayer,
+                    selectedCategoryName = state.selectedCategory?.name ?: "General",
+                    selectedCategoryId = state.selectedCategory?.id ?: 9,
+                    isVsAi = state.isVsAi,
+                    boardData = Json.encodeToString(state.board),
+                )
 
             repository.saveSession(session)
         }
     }
 
+    /**
+     * Starts the countdown timer for the current turn if enabled in settings.
+     */
     private fun startTurnTimer() {
         stopTimer()
 
@@ -222,41 +290,51 @@ class GameViewModel(
         val seconds = setting.split(" ")[0].toIntOrNull() ?: return
         _uiState.update { it.copy(remainingTime = seconds) }
 
-        timerJob = viewModelScope.launch {
-            try {
-                while ((_uiState.value.remainingTime ?: 0) > 0) {
-                    delay(1000)
+        timerJob =
+            viewModelScope.launch {
+                try {
+                    while ((_uiState.value.remainingTime ?: 0) > 0) {
+                        delay(1000)
 
-                    _uiState.update {
-                        val current = it.remainingTime ?: 0
-                        it.copy(remainingTime = (current - 1).coerceAtLeast(0))
+                        _uiState.update {
+                            val current = it.remainingTime ?: 0
+                            it.copy(remainingTime = (current - 1).coerceAtLeast(0))
+                        }
                     }
-                }
 
-                if (_uiState.value.remainingTime == 0) {
-                    onTimeOut()
+                    if (_uiState.value.remainingTime == 0) {
+                        onTimeOut()
+                    }
+                } catch (e: Exception) {
+                    println("TIMER CRASH CAUGHT: $e")
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                println("TIMER CRASH CAUGHT: $e")
-                e.printStackTrace()
             }
-        }
     }
 
+    /**
+     * Stops and clears the current turn timer.
+     */
     private fun stopTimer() {
         timerJob?.cancel()
         timerJob = null
         _uiState.update { it.copy(remainingTime = null) }
     }
 
+    /**
+     * Handles the logic when a player fails to make a move before the timer expires.
+     */
     private fun onTimeOut() {
         onAnswerQuestion(false)
     }
 
+    /**
+     * Evaluates the "Emotions" of pieces based on their safety and ability to jump.
+     */
     private fun calculateEmotions(
         board: List<List<Piece?>>,
         currentPlayer: PlayerColor,
-        confusedPlayer: PlayerColor?
+        confusedPlayer: PlayerColor?,
     ): List<List<Piece?>> {
         if (board.isEmpty()) return board
 
@@ -264,31 +342,49 @@ class GameViewModel(
             row.mapIndexed { c, piece ->
                 piece?.let { p ->
                     val pos = Position(r, c)
-                    val emotion = when {
-                        p.color == confusedPlayer -> Emotion.CONFUSED
-                        currentPlayer == p.color && canPieceJump(pos, board) -> Emotion.MAD
-                        isPieceThreatened(pos, board) -> Emotion.SCARED
-                        else -> Emotion.HAPPY
-                    }
+                    val emotion =
+                        when {
+                            p.color == confusedPlayer -> Emotion.CONFUSED
+                            currentPlayer == p.color && canPieceJump(pos, board) -> Emotion.MAD
+                            isPieceThreatened(pos, board) -> Emotion.SCARED
+                            else -> Emotion.HAPPY
+                        }
                     p.copy(emotion = emotion)
                 }
             }
         }
     }
 
-    private fun canPieceJump(pos: Position, board: List<List<Piece?>>): Boolean {
+    /**
+     * Checks if a piece at the given position has any valid jump moves available.
+     */
+    private fun canPieceJump(
+        pos: Position,
+        board: List<List<Piece?>>,
+    ): Boolean {
         if (!isValidBoardPosition(pos, board)) return false
         return getJumpMovesOnly(pos, board).isNotEmpty()
     }
 
-    private fun isValidBoardPosition(pos: Position, board: List<List<Piece?>>): Boolean {
-        return board.size == 8 &&
-                pos.row in 0..7 &&
-                pos.col in 0..7 &&
-                board[pos.row].size == 8
-    }
+    /**
+     * Verifies that the provided position is within the bounds of the 8x8 board.
+     */
+    private fun isValidBoardPosition(
+        pos: Position,
+        board: List<List<Piece?>>,
+    ): Boolean =
+        board.size == 8 &&
+            pos.row in 0..7 &&
+            pos.col in 0..7 &&
+            board[pos.row].size == 8
 
-    private fun getJumpMovesOnly(pos: Position, board: List<List<Piece?>>): List<Position> {
+    /**
+     * Identifies all valid capture (jump) targets for a specific piece.
+     */
+    private fun getJumpMovesOnly(
+        pos: Position,
+        board: List<List<Piece?>>,
+    ): List<Position> {
         if (!isValidBoardPosition(pos, board)) return emptyList()
 
         val piece = board[pos.row][pos.col] ?: return emptyList()
@@ -320,17 +416,25 @@ class GameViewModel(
         return moves
     }
 
-    private fun getMoveDirections(piece: Piece): List<Int> {
-        return if (piece.king) {
+    /**
+     * Returns the valid vertical movement directions based on piece color and King status.
+     */
+    private fun getMoveDirections(piece: Piece): List<Int> =
+        if (piece.king) {
             listOf(-1, 1)
         } else if (piece.color == PlayerColor.RED) {
             listOf(-1)
         } else {
             listOf(1)
         }
-    }
 
-    private fun isPieceThreatened(pos: Position, board: List<List<Piece?>>): Boolean {
+    /**
+     * Determines if a piece at a given position is vulnerable to an opponent's jump.
+     */
+    private fun isPieceThreatened(
+        pos: Position,
+        board: List<List<Piece?>>,
+    ): Boolean {
         if (!isValidBoardPosition(pos, board)) return false
 
         val piece = board[pos.row][pos.col] ?: return false
@@ -357,6 +461,9 @@ class GameViewModel(
         return false
     }
 
+    /**
+     * Main UI interaction handler for board taps. Handles selection and movement triggers.
+     */
     fun onCellClick(position: Position) {
         val state = _uiState.value
 
@@ -366,7 +473,9 @@ class GameViewModel(
             state.isTie ||
             state.isCoinFlipping ||
             state.showQuestion
-        ) return
+        ) {
+            return
+        }
 
         // Block human input during AI turn in single player
         if (state.isVsAi && state.currentPlayer == PlayerColor.BLUE) {
@@ -383,7 +492,7 @@ class GameViewModel(
                 _uiState.update {
                     it.copy(
                         selectedPosition = position,
-                        validMoves = moves
+                        validMoves = moves,
                     )
                 }
             }
@@ -398,14 +507,21 @@ class GameViewModel(
                 _uiState.update {
                     it.copy(
                         selectedPosition = null,
-                        validMoves = emptyList()
+                        validMoves = emptyList(),
                     )
                 }
             }
         }
     }
 
-    private fun getValidMoves(pos: Position, board: List<List<Piece?>>): List<Position> {
+    /**
+     * Retrieves all valid moves (standard steps and jumps) for a piece.
+     * Forces jump moves to be prioritized if available.
+     */
+    private fun getValidMoves(
+        pos: Position,
+        board: List<List<Piece?>>,
+    ): List<Position> {
         if (!isValidBoardPosition(pos, board)) return emptyList()
 
         val piece = board[pos.row][pos.col] ?: return emptyList()
@@ -430,42 +546,50 @@ class GameViewModel(
         return moves
     }
 
+    /**
+     * Pauses the game to trigger a trivia question before allowing a move to complete.
+     */
     private fun triggerQuestion() {
         safeLaunch {
             _uiState.update {
                 it.copy(
                     isLoading = true,
-                    errorMessage = null
+                    errorMessage = null,
                 )
             }
 
             val catId = _uiState.value.selectedCategory?.id ?: 9
             val question = repository.getQuestion(catId)
+            val strings = getStrings(_uiState.value.selectedLanguage)
 
             if (question != null) {
                 _uiState.update {
                     it.copy(
                         currentQuestion = question,
                         showQuestion = true,
-                        isLoading = false
+                        isLoading = false,
                     )
                 }
             } else {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = "Could not fetch trivia questions. Check your connection.",
-                        currentQuestion = TriviaQuestion(
-                            question = "Is the sky blue?",
-                            correctAnswer = true
-                        ),
-                        showQuestion = true
+                        errorMessage = strings.errorNoQuestion,
+                        currentQuestion =
+                            TriviaQuestion(
+                                question = "Is the sky blue?",
+                                correctAnswer = true,
+                            ),
+                        showQuestion = true,
                     )
                 }
             }
         }
     }
 
+    /**
+     * Resolves the pending move based on whether the user answered trivia correctly.
+     */
     fun onAnswerQuestion(answer: Boolean) {
         val state = _uiState.value
         val question = state.currentQuestion
@@ -488,8 +612,11 @@ class GameViewModel(
             _uiState.update { it.copy(currentQuestion = null) }
 
             val nextPlayer =
-                if (state.currentPlayer == PlayerColor.RED) PlayerColor.BLUE
-                else PlayerColor.RED
+                if (state.currentPlayer == PlayerColor.RED) {
+                    PlayerColor.BLUE
+                } else {
+                    PlayerColor.RED
+                }
 
             _uiState.update {
                 it.copy(
@@ -499,7 +626,7 @@ class GameViewModel(
                     selectedPosition = null,
                     validMoves = emptyList(),
                     pendingMove = null,
-                    isMultiJumpActive = false
+                    isMultiJumpActive = false,
                 )
             }
 
@@ -511,7 +638,7 @@ class GameViewModel(
                 _uiState.update {
                     it.copy(
                         isConfusedState = null,
-                        board = calculateEmotions(it.board, it.currentPlayer, null)
+                        board = calculateEmotions(it.board, it.currentPlayer, null),
                     )
                 }
 
@@ -521,29 +648,36 @@ class GameViewModel(
         }
     }
 
+    /**
+     * Cancels the current pending move and dismisses the trivia overlay.
+     */
     fun cancelMove() {
         _uiState.update {
             it.copy(
                 showQuestion = false,
                 selectedPosition = null,
                 validMoves = emptyList(),
-                pendingMove = null
+                pendingMove = null,
             )
         }
     }
 
+    /**
+     * Handles early game termination by one of the players.
+     */
     fun forfeit() {
         stopTimer()
         aiJob?.cancel()
 
-        val winner = if (_uiState.value.isVsAi) {
-            // In single player, the human always loses when forfeiting
-            PlayerColor.BLUE
-        } else {
-            // In local multiplayer, current player forfeits
-            val loser = _uiState.value.currentPlayer
-            if (loser == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
-        }
+        val winner =
+            if (_uiState.value.isVsAi) {
+                // In single player, the human always loses when forfeiting
+                PlayerColor.BLUE
+            } else {
+                // In local multiplayer, current player forfeits
+                val loser = _uiState.value.currentPlayer
+                if (loser == PlayerColor.RED) PlayerColor.BLUE else PlayerColor.RED
+            }
 
         _uiState.update { it.copy(winner = winner) }
 
@@ -552,15 +686,19 @@ class GameViewModel(
         }
     }
 
+    /**
+     * Commits the pending move to the board, handles piece captures, and checks for kinging.
+     */
     private fun executeMove() {
         stopTimer()
 
         val state = _uiState.value
 
-        val move = state.pendingMove ?: run {
-            println("EXECUTE MOVE STOPPED: pendingMove was null")
-            return
-        }
+        val move =
+            state.pendingMove ?: run {
+                println("EXECUTE MOVE STOPPED: pendingMove was null")
+                return
+            }
 
         val (from, to) = move
 
@@ -570,10 +708,11 @@ class GameViewModel(
         }
 
         val newBoard = state.board.map { it.toMutableList() }
-        val piece = newBoard[from.row][from.col] ?: run {
-            println("EXECUTE MOVE STOPPED: no piece at from position")
-            return
-        }
+        val piece =
+            newBoard[from.row][from.col] ?: run {
+                println("EXECUTE MOVE STOPPED: no piece at from position")
+                return
+            }
 
         newBoard[to.row][to.col] = piece
         newBoard[from.row][from.col] = null
@@ -617,7 +756,7 @@ class GameViewModel(
                         selectedPosition = to,
                         validMoves = nextJumps,
                         pendingMove = null,
-                        isMultiJumpActive = true
+                        isMultiJumpActive = true,
                     )
                 }
 
@@ -631,7 +770,7 @@ class GameViewModel(
             _uiState.update {
                 it.copy(
                     isTie = true,
-                    winner = null
+                    winner = null,
                 )
             }
 
@@ -643,8 +782,11 @@ class GameViewModel(
         }
 
         val nextPlayer =
-            if (state.currentPlayer == PlayerColor.RED) PlayerColor.BLUE
-            else PlayerColor.RED
+            if (state.currentPlayer == PlayerColor.RED) {
+                PlayerColor.BLUE
+            } else {
+                PlayerColor.RED
+            }
 
         _uiState.update {
             it.copy(
@@ -654,7 +796,7 @@ class GameViewModel(
                 validMoves = emptyList(),
                 pendingMove = null,
                 isConfusedState = null,
-                isMultiJumpActive = false
+                isMultiJumpActive = false,
             )
         }
 
@@ -664,6 +806,9 @@ class GameViewModel(
         checkAiTurn()
     }
 
+    /**
+     * Checks if the AI should take a turn.
+     */
     private fun checkAiTurn() {
         val state = _uiState.value
 
@@ -677,101 +822,110 @@ class GameViewModel(
         }
     }
 
+    /**
+     * Executes the AI decision engine. Prioritizes jumps and uses randomized delays to simulate thinking.
+     */
     private fun runAi() {
         aiJob?.cancel()
 
-        aiJob = viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(isAiThinking = true) }
+        aiJob =
+            viewModelScope.launch {
+                try {
+                    _uiState.update { it.copy(isAiThinking = true) }
 
-                delay(1500)
+                    delay(1500)
 
-                var state = _uiState.value
+                    var state = _uiState.value
 
-                while (
-                    state.isVsAi &&
-                    state.currentPlayer == PlayerColor.BLUE &&
-                    state.winner == null &&
-                    !state.isTie
-                ) {
-                    val allMoves = mutableListOf<Pair<Position, Position>>()
+                    while (
+                        state.isVsAi &&
+                        state.currentPlayer == PlayerColor.BLUE &&
+                        state.winner == null &&
+                        !state.isTie
+                    ) {
+                        val allMoves = mutableListOf<Pair<Position, Position>>()
 
-                    if (state.isMultiJumpActive && state.selectedPosition != null) {
-                        val from = state.selectedPosition
+                        if (state.isMultiJumpActive && state.selectedPosition != null) {
+                            val from = state.selectedPosition
 
-                        if (from != null) {
-                            getJumpMovesOnly(from, state.board).forEach { to ->
-                                allMoves.add(from to to)
+                            if (from != null) {
+                                getJumpMovesOnly(from, state.board).forEach { to ->
+                                    allMoves.add(from to to)
+                                }
                             }
-                        }
-                    } else {
-                        for (r in 0..7) {
-                            for (c in 0..7) {
-                                val piece = state.board[r][c]
+                        } else {
+                            for (r in 0..7) {
+                                for (c in 0..7) {
+                                    val piece = state.board[r][c]
 
-                                if (piece?.color == PlayerColor.BLUE) {
-                                    val from = Position(r, c)
+                                    if (piece?.color == PlayerColor.BLUE) {
+                                        val from = Position(r, c)
 
-                                    getValidMoves(from, state.board).forEach { to ->
-                                        allMoves.add(from to to)
+                                        getValidMoves(from, state.board).forEach { to ->
+                                            allMoves.add(from to to)
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    if (allMoves.isEmpty()) {
-                        if (!state.isMultiJumpActive) {
-                            _uiState.update {
-                                it.copy(
-                                    winner = PlayerColor.RED,
-                                    isAiThinking = false
-                                )
+                        if (allMoves.isEmpty()) {
+                            if (!state.isMultiJumpActive) {
+                                _uiState.update {
+                                    it.copy(
+                                        winner = PlayerColor.RED,
+                                        isAiThinking = false,
+                                    )
+                                }
+
+                                safeLaunch {
+                                    repository.clearSession()
+                                }
                             }
 
-                            safeLaunch {
-                                repository.clearSession()
-                            }
+                            break
                         }
 
-                        break
+                        val jumps =
+                            allMoves.filter {
+                                abs(it.first.row - it.second.row) == 2
+                            }
+
+                        val selectedMove =
+                            when {
+                                jumps.isNotEmpty() -> jumps.randomOrNull()
+                                else -> allMoves.randomOrNull()
+                            }
+
+                        if (selectedMove == null) {
+                            println("AI STOPPED: selectedMove was null")
+                            break
+                        }
+
+                        _uiState.update {
+                            it.copy(pendingMove = selectedMove)
+                        }
+
+                        executeMove()
+
+                        state = _uiState.value
+
+                        if (state.isMultiJumpActive) {
+                            delay(1000)
+                        }
                     }
-
-                    val jumps = allMoves.filter {
-                        abs(it.first.row - it.second.row) == 2
-                    }
-
-                    val selectedMove = when {
-                        jumps.isNotEmpty() -> jumps.randomOrNull()
-                        else -> allMoves.randomOrNull()
-                    }
-
-                    if (selectedMove == null) {
-                        println("AI STOPPED: selectedMove was null")
-                        break
-                    }
-
-                    _uiState.update {
-                        it.copy(pendingMove = selectedMove)
-                    }
-
-                    executeMove()
-
-                    state = _uiState.value
-
-                    if (state.isMultiJumpActive) {
-                        delay(1000)
-                    }
+                } catch (e: Exception) {
+                    println("AI CRASH CAUGHT: $e")
+                    e.printStackTrace()
+                } finally {
+                    _uiState.update { it.copy(isAiThinking = false) }
                 }
-            } catch (e: Exception) {
-                println("AI CRASH CAUGHT: $e")
-                e.printStackTrace()
-            } finally {
-                _uiState.update { it.copy(isAiThinking = false) }
             }
-        }
     }
 
+    /**
+     * Scans the board to determine if either player has won the game.
+     */
     private fun checkWinCondition(board: List<List<Piece?>>) {
         val pieces = board.flatten().filterNotNull()
 

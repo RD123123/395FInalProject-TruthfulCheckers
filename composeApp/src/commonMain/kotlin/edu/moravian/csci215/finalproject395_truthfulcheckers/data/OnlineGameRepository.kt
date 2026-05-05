@@ -13,12 +13,18 @@ interface OnlineGameRepository {
         playerName: String,
         board: List<List<Piece?>>,
         category: TriviaCategory?,
-        difficulty: String
+        difficulty: String,
     ): Result<Unit>
 
-    suspend fun joinRoom(roomCode: String, playerName: String): Result<Unit>
+    suspend fun joinRoom(
+        roomCode: String,
+        playerName: String,
+    ): Result<Unit>
 
-    suspend fun updateGameState(roomCode: String, state: OnlineGameState): Result<Unit>
+    suspend fun updateGameState(
+        roomCode: String,
+        state: OnlineGameState,
+    ): Result<Unit>
 
     suspend fun closeRoom(roomCode: String): Result<Unit>
 

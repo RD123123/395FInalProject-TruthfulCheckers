@@ -19,7 +19,7 @@ fun OnlineMainGameScreen(
     gameViewModel: GameViewModel,
     onlineViewModel: OnlineGameViewModel,
     onGameEnd: () -> Unit,
-    onLeave: () -> Unit
+    onLeave: () -> Unit,
 ) {
     val appState by gameViewModel.uiState.collectAsState()
     val state by onlineViewModel.uiState.collectAsState()
@@ -46,57 +46,60 @@ fun OnlineMainGameScreen(
                 Button(onClick = onLeave) {
                     Text("OK")
                 }
-            }
+            },
         )
     }
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background),
     ) {
         val isLandscape = maxWidth > maxHeight
 
         Column(modifier = Modifier.fillMaxSize()) {
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
                             text = "${strings.room}: ${gameState.roomCode}",
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
 
                         Text(
-                            text = when (myColor) {
-                                PlayerColor.RED -> "${strings.you}: RED"
-                                PlayerColor.BLUE -> "${strings.you}: BLUE"
-                                null -> strings.spectating
-                            },
-                            color = when (myColor) {
-                                PlayerColor.RED -> Color.Red
-                                PlayerColor.BLUE -> Color.Blue
-                                null -> MaterialTheme.colorScheme.onSecondaryContainer
-                            },
-                            fontWeight = FontWeight.Bold
+                            text =
+                                when (myColor) {
+                                    PlayerColor.RED -> "${strings.you}: RED"
+                                    PlayerColor.BLUE -> "${strings.you}: BLUE"
+                                    null -> strings.spectating
+                                },
+                            color =
+                                when (myColor) {
+                                    PlayerColor.RED -> Color.Red
+                                    PlayerColor.BLUE -> Color.Blue
+                                    null -> MaterialTheme.colorScheme.onSecondaryContainer
+                                },
+                            fontWeight = FontWeight.Bold,
                         )
                     }
 
                     Text(
                         text = "${strings.category}: ${gameState.selectedCategoryName}",
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.labelMedium,
                     )
 
                     Text(
                         text = if (isMyTurn) strings.yourTurn else strings.opponentsTurn,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isMyTurn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer
+                        color = if (isMyTurn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }
@@ -107,13 +110,13 @@ fun OnlineMainGameScreen(
                 player2Name = if (gameState.blueJoined) gameState.bluePlayerName else strings.waiting,
                 remainingTime = null,
                 onForfeit = { onlineViewModel.forfeit() },
-                strings = strings
+                strings = strings,
             )
 
             if (!gameState.blueJoined) {
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
@@ -121,65 +124,66 @@ fun OnlineMainGameScreen(
                         Text(strings.waitingForOpponent)
                         Text(
                             text = "${strings.shareCode}: ${gameState.roomCode}",
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }
             } else {
                 if (isLandscape) {
                     Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(8.dp),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         PlayerInfoVertical(
                             name = gameState.bluePlayerName,
-                            color = Color.Blue,
                             isCurrentTurn = gameState.currentPlayer == PlayerColor.BLUE,
                             strings = strings,
-                            modifier = Modifier.width(120.dp)
+                            modifier = Modifier.width(120.dp),
                         )
 
                         Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .aspectRatio(1f)
-                                .padding(4.dp),
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .fillMaxHeight()
+                                    .aspectRatio(1f)
+                                    .padding(4.dp),
+                            contentAlignment = Alignment.Center,
                         ) {
                             Board(
                                 board = board,
                                 selectedPosition = state.selectedPosition,
                                 validMoves = state.validMoves,
                                 boardStyle = appState.selectedBoardStyle,
-                                onCellClick = { onlineViewModel.onCellClick(it) }
+                                onCellClick = { onlineViewModel.onCellClick(it) },
                             )
                         }
 
                         PlayerInfoVertical(
                             name = gameState.redPlayerName,
-                            color = Color.Red,
                             isCurrentTurn = gameState.currentPlayer == PlayerColor.RED,
                             strings = strings,
-                            modifier = Modifier.width(120.dp)
+                            modifier = Modifier.width(120.dp),
                         )
                     }
                 } else {
                     Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         PlayerInfoHorizontal(
                             name = gameState.bluePlayerName,
                             color = Color.Blue,
                             isCurrentTurn = gameState.currentPlayer == PlayerColor.BLUE,
-                            strings = strings
+                            strings = strings,
                         )
 
                         Spacer(Modifier.weight(1f))
@@ -190,7 +194,7 @@ fun OnlineMainGameScreen(
                                 selectedPosition = state.selectedPosition,
                                 validMoves = state.validMoves,
                                 boardStyle = appState.selectedBoardStyle,
-                                onCellClick = { onlineViewModel.onCellClick(it) }
+                                onCellClick = { onlineViewModel.onCellClick(it) },
                             )
                         }
 
@@ -200,7 +204,7 @@ fun OnlineMainGameScreen(
                             name = gameState.redPlayerName,
                             color = Color.Red,
                             isCurrentTurn = gameState.currentPlayer == PlayerColor.RED,
-                            strings = strings
+                            strings = strings,
                         )
                     }
                 }
@@ -214,7 +218,7 @@ fun OnlineMainGameScreen(
                 onAnswer = { onlineViewModel.onAnswerQuestion(it) },
                 onCancel = { onlineViewModel.cancelMove() },
                 isLandscape = isLandscape,
-                strings = strings
+                strings = strings,
             )
         }
 
@@ -223,7 +227,7 @@ fun OnlineMainGameScreen(
                 Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 CircularProgressIndicator()
             }
